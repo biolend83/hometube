@@ -69,7 +69,7 @@ the PO-token provider for live streams, whisper.cpp for live captions, and the o
 Invidious + companion + PostgreSQL images. Works on x86-64 and ARM64.
 
 ```sh
-git clone https://github.com/<you>/tubehaus && cd tubehaus
+git clone https://github.com/biolend83/tubehaus && cd tubehaus
 cp .env.example .env        # set your domain and three secrets
 docker compose up -d        # first build takes a few minutes (whisper.cpp)
 ```
@@ -115,7 +115,7 @@ Follow the [Invidious installation guide](https://docs.invidious.io/installation
 ### 3. TubeHaus server
 
 ```sh
-git clone https://github.com/<you>/tubehaus /opt/tubehaus
+git clone https://github.com/biolend83/tubehaus /opt/tubehaus
 cd /opt/tubehaus && cp .env.example .env    # edit it
 sudo cp deploy/tubehaus.service /etc/systemd/system/ && sudo systemctl enable --now tubehaus
 ```
