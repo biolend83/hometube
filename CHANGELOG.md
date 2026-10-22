@@ -15,7 +15,7 @@
 - [Troubleshooting](docs/TROUBLESHOOTING.md) and [Updating and backups](docs/UPGRADING.md) guides
 - Server unit tests and a translation completeness check, both run in CI
 - **Prebuilt images** for amd64 and arm64 (`ghcr.io/biolend83/tubehaus`): `docker compose pull` instead of compiling whisper.cpp on your server
-- CodeQL code scanning, Dependabot for GitHub Actions and the base image
+- CodeQL code scanning
 
 ### Changed
 - docker compose uses the prebuilt image (`--build` still builds from the checkout)
