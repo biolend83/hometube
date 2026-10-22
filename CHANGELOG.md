@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Turkish interface (thanks @SakarPaisen, #8)
+
 ## v0.2.0 — 2026-10-22
 
 ### Added

@@ -36,7 +36,7 @@ YouTube. TubeHaus adds its own front end and a small server next to them. All cr
 **🎙️ Live captions**
 - YouTube gives no captions for live streams. TubeHaus transcribes them on the fly with [whisper.cpp](https://github.com/ggml-org/whisper.cpp), a few seconds ahead of playback, on a single CPU core
 
-**🌍 11 languages:** 한국어 · English · 日本語 · 简体中文 · Español · Português · Français · Deutsch · Русский · हिन्दी · Bahasa Indonesia —
+**🌍 12 languages:** 한국어 · English · 日本語 · 简体中文 · Español · Português · Français · Deutsch · Русский · हिन्दी · Bahasa Indonesia · Türkçe —
 chosen on the first visit (the browser's language is preselected) and changeable any time under **Language** in the
 account menu or Settings. View counts and dates follow each language's own style.
 
