@@ -2,6 +2,8 @@ package app.tubehaus.desktop
 
 import app.tubehaus.data.Transfer
 import app.tubehaus.engine.Channel
+import app.tubehaus.engine.Clients
+import app.tubehaus.engine.Remote
 import app.tubehaus.engine.Dash
 import app.tubehaus.engine.Net
 import app.tubehaus.engine.Playlist
@@ -83,6 +85,24 @@ fun main() = runBlocking {
     check("import csv") {
         val p = Transfer.parse("Channel Id,Channel Url,Channel Title\nUCuAXFkgsw1L7xaCfnd5JJOw,http://www.youtube.com/channel/UCuAXFkgsw1L7xaCfnd5JJOw,Rick Astley\n")
         "${p.format} ${p.subs}"
+    }
+    check("update check") {
+        val a = Remote.newerRelease("app-v", "0.2.0", ".apk")
+        val d = Remote.newerRelease("desktop-v", "0.2.0", ".msi")
+        require(a != null && d != null) { "no release found" }
+        require(Remote.newerRelease("app-v", "99.0.0", ".apk") == null) { "offered an older version" }
+        "android ${a.version} ${a.download}; desktop ${d.version} ${d.download}"
+    }
+    check("client list") {
+        // the repository's clients.json, read the way an installed app reads its saved copy
+        val f = java.io.File(System.getProperty("java.io.tmpdir"), "tubehaus-check-clients.json")
+        f.writeText(java.io.File("../clients.json").readText())
+        Remote.clientsFile = f
+        Clients.PLAYERS = emptyList()
+        Remote.restoreClients()
+        require(Clients.PLAYERS.size >= 2) { "list not read" }
+        val s = YouTube.stream("dQw4w9WgXcQ")
+        Clients.PLAYERS.joinToString { "${it.name} ${it.version} ${it.extra}" } + " -> stream via " + s.client
     }
     println(if (fails == 0) "\nall good" else "\n$fails failed")
     Net.client.dispatcher.executorService.shutdown()

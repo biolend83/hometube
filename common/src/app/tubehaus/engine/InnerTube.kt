@@ -48,8 +48,8 @@ object Clients {
         "com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip",
         mapOf("deviceMake" to "Oculus", "deviceModel" to "Quest 3", "androidSdkVersion" to 32, "osName" to "Android", "osVersion" to "12L"),
     )
-    /** in the order the player tries them */
-    val PLAYERS = listOf(VISIONOS, ANDROID_VR)
+    /** in the order the player tries them; replaced by the list on GitHub when there is a newer one (Remote) */
+    @Volatile var PLAYERS = listOf(VISIONOS, ANDROID_VR)
 }
 
 object InnerTube {

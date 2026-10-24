@@ -89,4 +89,8 @@ data class Settings(
     val subsFeedOff: Boolean = false,
     val hideShorts: Boolean = false,
     val hideRelated: Boolean = false,
+    /** once a day: a newer app version, and the stream client list (engine/Remote.kt) */
+    val checkUpdates: Boolean = true,
+    val checkedAt: Long = 0,
+    val skipVersion: String = "",
 )

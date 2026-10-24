@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import app.tubehaus.data.Store
 import app.tubehaus.engine.InnerTube
+import app.tubehaus.engine.Remote
 import app.tubehaus.engine.Video
 import app.tubehaus.rec.Feed
 import app.tubehaus.rec.Recommender
@@ -40,6 +41,26 @@ class AppState(val platform: Platform, val store: Store) {
     init {
         // the YouTube visitor identity is kept with the app's data (never in backups or exports)
         InnerTube.identityFile = java.io.File(platform.dataDir, "identity.json")
+        Remote.clientsFile = java.io.File(platform.dataDir, "clients.json")
+        Remote.restoreClients()
+    }
+
+    /** a newer version to offer, found by [checkForUpdates] */
+    var update by mutableStateOf<Remote.Release?>(null)
+
+    /** at most once a day unless [now]; [quiet]: say nothing when there is nothing new */
+    fun checkForUpdates(now: Boolean = false, quiet: Boolean = true) {
+        val set = store.settings.value
+        if (!now && (!set.checkUpdates || System.currentTimeMillis() - set.checkedAt < Remote.DAY)) return
+        scope.launch {
+            store.settings.update { it.copy(checkedAt = System.currentTimeMillis()) }
+            Remote.refreshClients()
+            val desktopFile = if (System.getProperty("os.name").startsWith("Windows")) ".msi" else null   // Linux: the page, pick deb/rpm/tar.gz
+            val r = if (platform.name == "android") Remote.newerRelease("app-v", VERSION, ".apk")
+                else Remote.newerRelease("desktop-v", VERSION, desktopFile)
+            if (r != null && (now || r.version != store.settings.value.skipVersion)) update = r
+            else if (!quiet) toast(tr("TubeHaus is up to date"))
+        }
     }
 
     val feed = Feed(store)
