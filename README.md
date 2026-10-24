@@ -1,14 +1,14 @@
 <div align="center">
 
-# TubeHaus for Android and Windows
+# TubeHaus for Windows
 
-**YouTube on your own terms — and everything runs on your device.**
+**YouTube on your own terms — and everything runs on your PC.**
 
 No server, no account, no Google sign-in, no tracking. The app talks to YouTube directly,
 keeps your subscriptions, history and playlists on the device, and works out recommendations
 there too.
 
-**[⬇ Android APK (0.1.2, beta)](https://github.com/biolend83/tubehaus/releases/download/app-v0.1.2/TubeHaus-0.1.2.apk)** · **[⬇ Windows installer (0.2.0, beta)](https://github.com/biolend83/tubehaus/releases/download/win-v0.2.0/TubeHaus-0.2.0.msi)** · [All app releases](https://github.com/biolend83/tubehaus/releases) · [TubeHaus web app (main branch)](https://github.com/biolend83/tubehaus)
+**[⬇ Download for Windows 10/11 (0.2.0, beta)](https://github.com/biolend83/tubehaus/releases/download/win-v0.2.0/TubeHaus-0.2.0.msi)** · [Android app](https://github.com/biolend83/tubehaus/tree/android-app) · [All app releases](https://github.com/biolend83/tubehaus/releases) · [TubeHaus web app (main branch)](https://github.com/biolend83/tubehaus)
 
 </div>
 
