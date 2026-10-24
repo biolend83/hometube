@@ -40,7 +40,13 @@ compose.desktop {
         mainClass = "app.tubehaus.desktop.MainKt"
         jvmArgs += listOf("-Xmx512m")
         nativeDistributions {
-            targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.AppImage, TargetFormat.Dmg)
+            // only the formats of the system it is built on (Compose refuses e.g. AppImage on macOS)
+            val os = System.getProperty("os.name")
+            when {
+                os.startsWith("Windows") -> targetFormats(TargetFormat.Msi, TargetFormat.Exe)
+                os.startsWith("Mac") -> targetFormats(TargetFormat.Dmg)
+                else -> targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.AppImage)
+            }
             packageName = "TubeHaus"
             packageVersion = appVersion
             description = "YouTube on your own terms"
