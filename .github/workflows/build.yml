@@ -75,13 +75,15 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
-      - name: Build .deb and app image
-        # libmpv isn't bundled: the app uses the system's (libmpv2 / mpv)
+      - name: Build .deb, .rpm and app image
+        # libmpv isn't bundled: the app uses the system's (libmpv2 / mpv-libs)
         run: |
-          ./gradlew --no-daemon :desktop:packageReleaseDeb :desktop:packageReleaseAppImage
+          sudo apt-get install -y rpm
+          ./gradlew --no-daemon :desktop:packageReleaseDeb :desktop:packageReleaseRpm :desktop:packageReleaseAppImage
           ver=$(sed -n 's/^app.version=//p' gradle.properties)
           out=desktop/build/compose/binaries/main-release
           cp "$(find $out/deb -name '*.deb' | head -1)" "TubeHaus-$ver-linux-amd64.deb"
+          cp "$(find $out/rpm -name '*.rpm' | head -1)" "TubeHaus-$ver-linux-x86_64.rpm"
           app=$(find $out/app -mindepth 1 -maxdepth 1 -type d | head -1)
           tar -C "$(dirname "$app")" -czf "TubeHaus-$ver-linux-x64.tar.gz" "$(basename "$app")"
           ls -la TubeHaus-*
@@ -90,6 +92,7 @@ jobs:
           name: linux
           path: |
             TubeHaus-*.deb
+            TubeHaus-*.rpm
             TubeHaus-*.tar.gz
 
   release:
@@ -108,7 +111,7 @@ jobs:
         # not update the ones already installed, so the APK is always uploaded by hand
         run: |
           files="windows/*.msi"
-          case "$GITHUB_REF_NAME" in desktop-v*) files="$files linux/*.deb linux/*.tar.gz";; esac
+          case "$GITHUB_REF_NAME" in desktop-v*) files="$files linux/*.deb linux/*.rpm linux/*.tar.gz";; esac
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" $files --repo "$GITHUB_REPOSITORY" --clobber
           else

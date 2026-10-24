@@ -52,9 +52,9 @@ ExoPlayer (Media3) on Android, libmpv on Windows.
 - **Windows 10/11 (64-bit)** — [the installer](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.0/TubeHaus-0.3.0.msi)
   (beta, mpv built in). Windows may warn that the publisher is unknown, because the installer
   isn't code-signed: choose *More info* → *Run anyway*.
-- **Linux (x86-64)** — [.deb](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.0/TubeHaus-0.3.0-linux-amd64.deb) for Debian/Ubuntu, or [a tar.gz](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.0/TubeHaus-0.3.0-linux-x64.tar.gz) to unpack
-  anywhere and run `TubeHaus/bin/TubeHaus`. It uses your system's mpv: `sudo apt install libmpv2`
-  (Fedora and Arch: the `mpv` package). New and not yet tested much: reports welcome.
+- **Linux (x86-64)** — [.deb](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.0/TubeHaus-0.3.0-linux-amd64.deb) for Debian/Ubuntu, [.rpm](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.0/TubeHaus-0.3.0-linux-x86_64.rpm)
+  for Fedora/openSUSE, or [a tar.gz](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.0/TubeHaus-0.3.0-linux-x64.tar.gz) to unpack anywhere and run `TubeHaus/bin/TubeHaus`.
+  It uses your system's mpv: `sudo apt install libmpv2` (Fedora: `sudo dnf install mpv-libs`, Arch: `mpv`). New and not yet tested much: reports welcome.
 
 There is no iOS version: apps outside the App Store can't be installed on an iPhone without
 re-signing them every week. On iPhone and iPad, use the TubeHaus web app.
