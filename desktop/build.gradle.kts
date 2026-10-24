@@ -40,7 +40,7 @@ compose.desktop {
         mainClass = "app.tubehaus.desktop.MainKt"
         jvmArgs += listOf("-Xmx512m")
         nativeDistributions {
-            targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb, TargetFormat.AppImage)
+            targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.AppImage)
             packageName = "TubeHaus"
             packageVersion = appVersion
             description = "YouTube on your own terms"
@@ -63,6 +63,7 @@ compose.desktop {
                 debMaintainer = "biolend83 <258010694+biolend83@users.noreply.github.com>"
                 menuGroup = "AudioVideo"
                 appCategory = "Video"
+                rpmLicenseType = "GPL-3.0-only"
                 shortcut = true
                 iconFile.set(project.layout.projectDirectory.file("src/main/resources/icon.png"))
             }
