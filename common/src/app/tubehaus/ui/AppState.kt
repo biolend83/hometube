@@ -89,8 +89,8 @@ class AppState(val platform: Platform, val store: Store) {
             val os = System.getProperty("os.name")
             // Linux: the release page, to pick deb/rpm/tar.gz
             val desktopFile = when { os.startsWith("Windows") -> ".msi"; os.startsWith("Mac") -> ".dmg"; else -> null }
-            val r = if (platform.name == "android") Remote.newerRelease("app-v", VERSION, ".apk")
-                else Remote.newerRelease("desktop-v", VERSION, desktopFile)
+            // one release per version (app-v*) carries every platform's file
+            val r = Remote.newerRelease("app-v", VERSION, if (platform.name == "android") ".apk" else desktopFile)
             if (r != null && (now || r.version != store.settings.value.skipVersion)) update = r
             else if (!quiet) toast(tr("TubeHaus is up to date"))
         }

@@ -57,8 +57,9 @@ object Remote {
 
     /**
      * The newest release for this app newer than [current], or null. [tag] is the release
-     * line ("app-v" Android, "desktop-v" Windows and Linux); [asset] picks the file to offer
-     * (".apk", ".msi"), and without one the release page is offered.
+     * line: "app-v", one release per version with every platform's file (apps up to 0.3.6
+     * looked for "desktop-v" on the desktop); [asset] picks the file to offer (".apk", ".msi",
+     * ".dmg"), and without one the release page is offered.
      */
     suspend fun newerRelease(tag: String, current: String, asset: String?): Release? {
         val text = runCatching { Net.get(RELEASES_URL, mapOf("Accept" to "application/vnd.github+json")) }.getOrNull() ?: return null
