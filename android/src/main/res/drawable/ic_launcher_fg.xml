@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- the TubeHaus mark: a red rounded screen with a white play triangle, inside the 66dp safe zone -->
+<!-- the TubeHaus mark (web/y/icon.svg): a teal house with an arched door and a play triangle in it,
+     scaled from the 512 grid into the 66dp safe zone of the 108dp adaptive icon -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#FF0033"
-        android:pathData="M36,34h36a10,10 0 0 1 10,10v20a10,10 0 0 1 -10,10h-36a10,10 0 0 1 -10,-10v-20a10,10 0 0 1 10,-10z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M48,44.5L62,54L48,63.5Z" />
+    <group android:scaleX="0.1576" android:scaleY="0.1576" android:translateX="13.65" android:translateY="13.81">
+        <path android:fillColor="#2DD4BF" android:pathData="M72,244 L256,82 L440,244 L398,244 L398,428 L114,428 L114,244 Z" />
+        <path android:fillColor="#14283F" android:pathData="M204,428 L204,312 A52,52 0 0 1 308,312 L308,428 Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M226,286 L284,312 L226,338 Z" />
+    </group>
 </vector>
