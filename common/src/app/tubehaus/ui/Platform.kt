@@ -25,6 +25,8 @@ interface Platform {
     /** lets the user pick a file; calls [done] with its text (null when cancelled) */
     fun openTextFile(done: (String?) -> Unit)
     fun setFullscreen(on: Boolean)
+    /** Android: hide the status and navigation bars outside full screen too */
+    fun setImmersive(on: Boolean) {}
     /** screen brightness for the player's swipe gesture, 0..1; null where there is none (the desktop) */
     fun brightness(): Float? = null
     fun setBrightness(v: Float) {}

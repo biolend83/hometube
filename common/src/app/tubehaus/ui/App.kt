@@ -1,5 +1,7 @@
 package app.tubehaus.ui
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -93,7 +95,11 @@ fun App(app: AppState) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     // phones get the phone layout; tablets and the desktop the wide one
                     BoxWithConstraints(Modifier.fillMaxSize()) {
-                        CompositionLocalProvider(LocalCompact provides (app.platform.touch && maxWidth < 600.dp)) {
+                        val d = LocalDensity.current
+                        CompositionLocalProvider(
+                            LocalCompact provides (app.platform.touch && maxWidth < 600.dp),
+                            LocalDensity provides Density(d.density, d.fontScale * settings.textScale),
+                        ) {
                             when {
                                 settings.lang.isEmpty() -> LanguagePicker(app)
                                 !settings.welcomed && app.store.lib.value.subs.isEmpty() -> Welcome(app)
@@ -105,7 +111,8 @@ fun App(app: AppState) {
                             }
                         }
                     }
-                    LaunchedEffect(Unit) { app.checkForUpdates() }
+                    LaunchedEffect(Unit) { app.checkForUpdates(); app.fillSubInfo() }
+                    LaunchedEffect(settings.hideBars) { app.platform.setImmersive(settings.hideBars) }
                     app.update?.let { UpdateDialog(app, it) }
                 }
             }
@@ -178,6 +185,7 @@ private fun Shell(app: AppState) {
                         Screen.Library -> LibraryScreen(app)
                         Screen.Settings -> SettingsScreen(app)
                         Screen.Learned -> LearnedScreen(app)
+                        Screen.ManageSubs -> ManageSubsScreen(app)
                         Screen.History -> HistoryScreen(app)
                         is Screen.Search -> SearchScreen(app, cur.query)
                         is Screen.Watch -> WatchScreen(app)

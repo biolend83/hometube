@@ -61,6 +61,10 @@ class AndroidPlatform(private val app: Application) : Platform {
         activity?.openTextFile(done) ?: done(null)
     }
 
+    override fun setImmersive(on: Boolean) {
+        activity?.setHideBars(on)
+    }
+
     override fun setFullscreen(on: Boolean) {
         activity?.setFullscreen(on)
         // brightness set by the gesture lasts while in full screen; out of it the system's applies again

@@ -106,9 +106,25 @@ class MainActivity : ComponentActivity() {
     // Full screen the YouTube way: the button turns the screen and holds it there until the phone
     // is physically turned the same way; from then on turning the phone enters and leaves full
     // screen by itself (as long as the system's auto-rotate allows it).
+    /** the status and navigation bars stay hidden outside full screen too (Settings) */
+    private var immersive = false
+    private var full = false
+
+    fun setHideBars(on: Boolean) {
+        immersive = on
+        bars(!on && !full)
+    }
+
     fun setFullscreen(on: Boolean) {
-        requestedOrientation = if (on) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
-        bars(!on)
+        full = on
+        // tablets keep whichever way they're held when leaving full screen; phones go back upright
+        val tablet = resources.configuration.smallestScreenWidthDp >= 600
+        requestedOrientation = when {
+            on -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            tablet -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            else -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+        }
+        bars(!on && !immersive)
     }
 
     private fun bars(show: Boolean) {
