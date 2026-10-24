@@ -59,7 +59,7 @@ fun SubsScreen(app: AppState) {
         loading = true
         try { items = app.feed.all(force) } finally { loading = false }
     }
-    LaunchedEffect(lib.subs.size) { load(false) }
+    LaunchedEffect(lib.subs.size) { if (!app.store.settings.value.subsFeedOff) load(false) }
     if (lib.subs.isEmpty()) {
         Column(Modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(tr("Channels you subscribe to show up here. Subscriptions are kept on this device - no account needed."),
@@ -70,9 +70,27 @@ fun SubsScreen(app: AppState) {
         }
         return
     }
-    val calm = app.store.settings.value.calm
+    // feed switched off: just the channels, each opens its own page
+    if (app.store.settings.value.subsFeedOff) {
+        LazyColumn(Modifier.fillMaxSize()) {
+            item {
+                Text(tr("The subscription feed is off. Open a channel to see its videos."), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
+            }
+            items(lib.subs.entries.sortedBy { it.value.name.lowercase() }.toList(), key = { it.key }) { (cid, s) ->
+                Row(
+                    Modifier.fillMaxWidth().clickable { app.go(Screen.Channel(cid, s.name)) }.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Avatar(s.thumb, 40)
+                    Text(s.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 14.dp))
+                }
+            }
+        }
+        return
+    }
     ItemGrid(
-        items.filter { !it.short || !calm }, app, loading = loading,
+        items.filter { !it.short || !app.noShorts }, app, loading = loading,
         header = {
             Column {
                 LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -103,7 +121,7 @@ fun LibraryScreen(app: AppState) {
                 items(lib.hist.take(20), key = { it.id }) { m ->
                     val v = m.video()
                     Column(Modifier.width(160.dp).clickable { app.watch(v) }) {
-                        Thumb(v, app, Modifier.fillMaxWidth(), rounded = 8)
+                        if (!app.store.settings.value.hideThumbs) Thumb(v, app, Modifier.fillMaxWidth(), rounded = 8)
                         Text(v.title, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                     }
                 }

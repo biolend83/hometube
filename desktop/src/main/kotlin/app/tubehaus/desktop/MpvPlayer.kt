@@ -271,7 +271,7 @@ class MpvPlayer : VideoPlayer {
     private fun open(startMs: Long) {
         val s = stream ?: return
         if (mpv() == null) {
-            st.update { it.copy(error = "mpv is missing: put libmpv-2.dll next to TubeHaus (see the README)", buffering = false) }
+            st.update { it.copy(error = LibMpv.MISSING, buffering = false) }
             return
         }
         val heights = s.video.map { it.height }.distinct().sorted()
@@ -373,7 +373,7 @@ class MpvPlayer : VideoPlayer {
     override fun View(modifier: Modifier) {
         if (!available) {
             Box(modifier.background(Color.Black), contentAlignment = Alignment.Center) {
-                Text("mpv is missing: put libmpv-2.dll next to TubeHaus", color = Color.White)
+                Text(LibMpv.MISSING, color = Color.White)
             }
             return
         }

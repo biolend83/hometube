@@ -76,17 +76,26 @@ fun Avatar(url: String, size: Int = 36, modifier: Modifier = Modifier) {
     Img(url, modifier.size(size.dp).clip(CircleShape))
 }
 
+/** LIVE, SHORTS or the length: on the thumbnail, or before the details when thumbnails are off */
+@Composable
+fun Video.badge(): String = when {
+    live -> tr("LIVE")
+    short -> tr("SHORTS")
+    else -> duration(lengthSec)
+}
+
+/** The line under a title; with thumbnails switched off it starts with the length they would show. */
+@Composable
+private fun Video.details(app: AppState, calm: Boolean): String =
+    listOf(badge().takeIf { app.store.settings.value.hideThumbs } ?: "", subline(calm)).filter { it.isNotEmpty() }.joinToString(" · ")
+
 /** Thumbnail with the length badge and a red bar for how much you've watched. */
 @Composable
 fun Thumb(v: Video, app: AppState, modifier: Modifier = Modifier, rounded: Int = 12) {
     val pos = app.store.lib.state.value.pos[v.id]
     Box(modifier.aspectRatio(16f / 9f).clip(RoundedCornerShape(rounded.dp))) {
         Img(v.thumb, Modifier.fillMaxSize())
-        val label = when {
-            v.live -> tr("LIVE")
-            v.short -> tr("SHORTS")
-            else -> duration(v.lengthSec)
-        }
+        val label = v.badge()
         if (label.isNotEmpty()) {
             Text(
                 label,
@@ -140,7 +149,7 @@ fun VideoMenu(v: Video, app: AppState, extra: List<Pair<String, () -> Unit>> = e
 fun VideoCard(v: Video, app: AppState, queue: List<Video> = emptyList()) {
     val calm = app.store.settings.value.calm
     Column(Modifier.fillMaxWidth().clickable { app.watch(v, queue) }.padding(bottom = 12.dp)) {
-        Thumb(v, app, Modifier.fillMaxWidth(), rounded = if (app.platform.touch) 0 else 12)
+        if (!app.store.settings.value.hideThumbs) Thumb(v, app, Modifier.fillMaxWidth(), rounded = if (app.platform.touch) 0 else 12)
         Row(Modifier.padding(start = 12.dp, top = 10.dp, end = 4.dp)) {
             if (v.channelId.isNotEmpty()) {
                 Avatar(v.avatar.ifEmpty { app.store.lib.value.subs[v.channelId]?.thumb ?: "" }, 36,
@@ -149,7 +158,7 @@ fun VideoCard(v: Video, app: AppState, queue: List<Video> = emptyList()) {
             }
             Column(Modifier.weight(1f)) {
                 Text(v.title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(v.subline(calm), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Text(v.details(app, calm), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
             }
             VideoMenu(v, app)
@@ -164,10 +173,10 @@ fun VideoRow(v: Video, app: AppState, queue: List<Video> = emptyList(), extra: L
     Row(
         Modifier.fillMaxWidth().clickable { if (onClick != null) onClick() else app.watch(v, queue) }.padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
-        Thumb(v, app, Modifier.width(168.dp), rounded = 8)
+        if (!app.store.settings.value.hideThumbs) Thumb(v, app, Modifier.width(168.dp), rounded = 8)
         Column(Modifier.weight(1f).padding(start = 10.dp)) {
             Text(v.title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(v.subline(calm), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Text(v.details(app, calm), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
         }
         VideoMenu(v, app, extra)
@@ -195,8 +204,10 @@ fun PlaylistRow(p: Playlist, app: AppState) {
     Row(
         Modifier.fillMaxWidth().clickable { app.go(Screen.Playlist(p.id, p.title)) }.padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
-        Box(Modifier.width(168.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp))) {
-            Img(p.thumb, Modifier.fillMaxSize())
+        // with thumbnails off the box stays (it carries the video count) but is left plain
+        Box(Modifier.width(if (app.store.settings.value.hideThumbs) 72.dp else 168.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp))) {
+            if (!app.store.settings.value.hideThumbs) Img(p.thumb, Modifier.fillMaxSize())
+            else Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
             Row(
                 Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color(0xCC000000), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,

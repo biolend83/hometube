@@ -40,7 +40,7 @@ compose.desktop {
         mainClass = "app.tubehaus.desktop.MainKt"
         jvmArgs += listOf("-Xmx512m")
         nativeDistributions {
-            targetFormats(TargetFormat.Msi, TargetFormat.Exe)
+            targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb, TargetFormat.AppImage)
             packageName = "TubeHaus"
             packageVersion = appVersion
             description = "YouTube on your own terms"
@@ -56,6 +56,15 @@ compose.desktop {
                 perUserInstall = true
                 upgradeUuid = "6f1d1c8e-3c43-4a8e-9a55-1b6a8f2a7c11"
                 iconFile.set(project.layout.projectDirectory.file("icon.ico"))
+            }
+            // Linux uses the system's libmpv (libmpv2 on Debian/Ubuntu), so nothing is bundled
+            linux {
+                packageName = "tubehaus"
+                debMaintainer = "biolend83 <258010694+biolend83@users.noreply.github.com>"
+                menuGroup = "AudioVideo"
+                appCategory = "Video"
+                shortcut = true
+                iconFile.set(project.layout.projectDirectory.file("src/main/resources/icon.png"))
             }
         }
         buildTypes.release.proguard { isEnabled.set(false) }

@@ -111,13 +111,12 @@ fun SearchScreen(app: AppState, initial: String) {
             }
         }
         val pager = rememberPager(query to filter, { YouTube.search(query, filter) }, { YouTube.searchMore(it) })
-        val calm = app.store.settings.value.calm
         when {
             pager.items.isEmpty() && pager.loading -> Busy()
             pager.items.isEmpty() && pager.error != null -> Problem(pager.error!!) { scope.launch { pager.load() } }
             pager.items.isEmpty() && pager.started -> Empty(tr("No results"))
             else -> ItemGrid(
-                pager.items.filter { !(calm && it is Video && it.short) }, app,
+                pager.items.filter { !(app.noShorts && it is Video && it.short) }, app,
                 loading = pager.loading, onEnd = { pager.loadMore() }, rows = !app.platform.touch,
             )
         }

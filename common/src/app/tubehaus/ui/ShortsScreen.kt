@@ -241,7 +241,7 @@ private fun ShortPage(app: AppState, v: Video, s: Stream?, active: Boolean) {
                     )
                 },
         ) {
-            Img(v.thumb, Modifier.fillMaxSize())
+            if (!app.store.settings.value.hideThumbs) Img(v.thumb, Modifier.fillMaxSize())
             if (mine) player.View(Modifier.fillMaxSize())
             if (mine && !st.playing && !st.buffering) {
                 Icon(Icons.Filled.PlayArrow, null, tint = Color.White, modifier = Modifier.size(72.dp).align(Alignment.Center))

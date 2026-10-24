@@ -82,4 +82,11 @@ data class Settings(
     val volume: Float = 1f,
     /** the first-start screen that offers to bring subscriptions over has been seen */
     val welcomed: Boolean = false,
+    // focus: take away the parts of YouTube that pull you in, one switch each
+    val hideThumbs: Boolean = false,
+    val hideComments: Boolean = false,
+    val homeOff: Boolean = false,
+    val subsFeedOff: Boolean = false,
+    val hideShorts: Boolean = false,
+    val hideRelated: Boolean = false,
 )

@@ -82,7 +82,10 @@ fun WatchScreen(app: AppState) {
                     item { Info(app, v) }
                     comments(app)
                 }
-                LazyColumn(Modifier.width(420.dp).padding(top = 16.dp, end = 8.dp)) { related(app) }
+                // with related videos switched off only a queue keeps the column
+                if (!app.store.settings.value.hideRelated || pb.queue.isNotEmpty()) {
+                    LazyColumn(Modifier.width(420.dp).padding(top = 16.dp, end = 8.dp)) { related(app) }
+                }
             }
         } else {
             Column(Modifier.fillMaxSize()) {
@@ -109,7 +112,7 @@ private fun PlayerBox(app: AppState) {
                 Button(onClick = { pb.retry() }, modifier = Modifier.padding(top = 12.dp)) { Text(tr("Try again")) }
             }
             pb.loading || st.videoId != v?.id -> {
-                if (v != null) Img(v.thumbHigh, Modifier.fillMaxSize())
+                if (v != null && !app.store.settings.value.hideThumbs) Img(v.thumbHigh, Modifier.fillMaxSize())
                 CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
             }
             else -> VideoArea(app, Modifier.fillMaxSize())
@@ -216,9 +219,9 @@ private fun LazyListScope.related(app: AppState) {
             VideoRow(v, app) { pb.open(v, queue.dropWhile { it.id != v.id }.drop(1)); app.stack[app.stack.size - 1] = Screen.Watch(v.id) }
         }
     }
+    if (app.store.settings.value.hideRelated) return
     val d = pb.details ?: run { item { Busy() }; return }
-    val calm = app.store.settings.value.calm
-    items(d.related.filter { !(calm && it is Video && it.short) }, key = { "r" + it.id }) {
+    items(d.related.filter { !(app.noShorts && it is Video && it.short) }, key = { "r" + it.id }) {
         when (it) {
             is Video -> VideoRow(it, app)
             is Playlist -> PlaylistRow(it, app)
@@ -230,6 +233,7 @@ private fun LazyListScope.related(app: AppState) {
 @Composable
 private fun CommentsTeaser(app: AppState) {
     var open by remember { mutableStateOf(false) }
+    if (app.store.settings.value.hideComments) return
     val token = app.playback.details?.commentsToken ?: return
     if (!open) {
         Row(
@@ -243,6 +247,7 @@ private fun CommentsTeaser(app: AppState) {
 }
 
 private fun LazyListScope.comments(app: AppState) {
+    if (app.store.settings.value.hideComments) return
     item {
         val token = app.playback.details?.commentsToken
         if (token != null) {
