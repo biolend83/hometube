@@ -102,7 +102,7 @@ fun SearchScreen(app: AppState, initial: String) {
         }
     }
 
-    val bottom = prefs.searchAtBottom && LocalCompact.current
+    val bottom = prefs.searchAtBottom && app.platform.touch
     Column(Modifier.fillMaxSize()) {
         if (!bottom) SearchBox()
         // the suggestions or the results; with the box at the bottom it sits under them

@@ -1,5 +1,6 @@
 package app.tubehaus.ui
 
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -86,24 +87,44 @@ fun WatchScreen(app: AppState) {
     var commentsOpen by remember(v.id) { mutableStateOf(false) }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = maxWidth > 840.dp
-        val sideWidth = minOf(420.dp, maxWidth * 0.4f)
+        val tablet = app.platform.touch
+        // tablets: a narrower panel, so the video gets most of the width
+        val sideWidth = if (tablet) minOf(380.dp, maxWidth * 0.32f) else minOf(420.dp, maxWidth * 0.4f)
         if (wide) {
             // tablets and the desktop: the video and its details on the left; up next or the comments on the right
             Row(Modifier.fillMaxSize()) {
-                LazyColumn(Modifier.weight(1f).padding(16.dp)) {
-                    item { PlayerBox(app) }
-                    item { Info(app, v) }
+                if (tablet) {
+                    // tablets: the video as large as the screen allows, with only its title under it;
+                    // the description, buttons and channel move into the panel (Details)
+                    Column(Modifier.weight(1f).fillMaxHeight().padding(12.dp), verticalArrangement = Arrangement.Center) {
+                        PlayerBox(app)
+                        Text(v.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 10.dp))
+                    }
+                } else {
+                    LazyColumn(Modifier.weight(1f).padding(16.dp)) {
+                        item { PlayerBox(app) }
+                        item { Info(app, v) }
+                    }
                 }
-                if (hasRelated || token != null) {
+                val tabs = buildList {
+                    if (hasRelated) add("next" to tr("Up next"))
+                    if (token != null) add("comments" to tr("Comments"))
+                    if (tablet) add("details" to tr("Details"))
+                }
+                if (tabs.isNotEmpty()) {
+                    val shown = side.takeIf { s -> tabs.any { it.first == s } } ?: tabs.first().first
                     Column(Modifier.width(sideWidth).padding(top = 8.dp, end = 8.dp)) {
-                        if (hasRelated && token != null) {
+                        if (tabs.size > 1) {
                             Row(Modifier.padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                FilterChip(side == "next", onClick = { side = "next" }, label = { Text(tr("Up next")) })
-                                FilterChip(side == "comments", onClick = { side = "comments" }, label = { Text(tr("Comments")) })
+                                for ((k, label) in tabs) FilterChip(shown == k, onClick = { side = k }, label = { Text(label) })
                             }
                         }
-                        if (token != null && (side == "comments" || !hasRelated)) Comments(app, token)
-                        else LazyColumn(Modifier.fillMaxSize()) { related(app, big = false) }
+                        when {
+                            shown == "comments" && token != null -> Comments(app, token)
+                            shown == "details" -> LazyColumn(Modifier.fillMaxSize()) { item { Info(app, v) } }
+                            else -> LazyColumn(Modifier.fillMaxSize()) { related(app, big = false) }
+                        }
                     }
                 }
             }
@@ -129,16 +150,16 @@ fun WatchScreen(app: AppState) {
 private fun PlayerBox(app: AppState) {
     val pb = app.playback
     val st by app.platform.player.state.collectAsState()
-    val compact = LocalCompact.current
+    val touch = app.platform.touch
     Box(
         Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(Color.Black)
-            // phones: swipe the video down to keep it playing in the mini player and go back
-            .pointerInput(compact) {
-                if (!compact) return@pointerInput
+            // touch screens: swipe the video down to keep it playing in the mini player and go back
+            .pointerInput(touch) {
+                if (!touch) return@pointerInput
                 var pulled = 0f
                 detectVerticalDragGestures(
                     onDragStart = { pulled = 0f },
-                    onVerticalDrag = { _, dy -> pulled += dy },
+                    onVerticalDrag = { change, dy -> change.consume(); pulled += dy },
                     onDragEnd = { if (pulled > 80.dp.toPx()) app.back() },
                 )
             },
