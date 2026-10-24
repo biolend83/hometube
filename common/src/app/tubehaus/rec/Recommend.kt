@@ -197,6 +197,17 @@ class Recommender(private val store: Store, private val feed: Feed) {
         rank(cands, n, skip, t, lib.hist.associate { it.id to it }, shorts = false)
     }
 
+    /**
+     * Discover: what you'd never be shown otherwise. Popular videos from topics you haven't
+     * shown interest in, ranked without your taste (only what you've watched is left out).
+     */
+    suspend fun discover(n: Int = 40, skip: Set<String> = emptySet()): List<Video> = coroutineScope {
+        val liked = store.taste.value.kw.keys.map { it.lowercase() }.toSet()
+        val fresh = topics.filter { it.lowercase() !in liked }.shuffled(rnd).take(6)
+        val cands = fresh.map { q -> async { pool("disc:$q", 3600) { search(q, "pop", q, false) } } }.awaitAll().flatten()
+        rank(cands, n, skip, Taste(), store.lib.value.hist.associate { it.id to it }, shorts = false)
+    }
+
     suspend fun shorts(n: Int = 10, skip: Set<String> = emptySet()): List<Video> = coroutineScope {
         val t = store.taste.value
         val lib = store.lib.value

@@ -1,5 +1,14 @@
 package app.tubehaus.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.vector.PathParser
@@ -111,13 +120,14 @@ fun App(app: AppState) {
                                 app.pip -> Box(Modifier.fillMaxSize().background(Color.Black)) {
                                     app.platform.player.View(Modifier.fillMaxSize())
                                 }
-                                app.fullscreen && app.current is Screen.Watch -> VideoArea(app, Modifier.fillMaxSize(), fullscreen = true)
+                                app.fullscreen && app.current is Screen.Watch -> FullscreenWatch(app)
                                 else -> Shell(app)
                             }
                         }
                     }
                     LaunchedEffect(Unit) { app.checkForUpdates(); app.fillSubInfo() }
                     LaunchedEffect(settings.hideBars) { app.platform.setImmersive(settings.hideBars) }
+                    LaunchedEffect(settings.longBuffer) { app.platform.player.setReadAhead(settings.longBuffer) }
                     app.update?.let { UpdateDialog(app, it) }
                 }
             }
@@ -143,7 +153,19 @@ private fun Shell(app: AppState) {
     val compact = LocalCompact.current
     val root = app.stack.firstOrNull()
     val showTop = cur !is Screen.Watch && cur !is Screen.Shorts && cur !is Screen.Search
+    // phones: the tabs slide away while scrolling down and come back scrolling up
+    val autoHide = compact && app.store.settings.state.collectAsState().value.autoHideNav
+    var navShown by remember { mutableStateOf(true) }
+    val navScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < -6f) navShown = false else if (available.y > 6f) navShown = true
+                return Offset.Zero
+            }
+        }
+    }
     LaunchedEffect(cur) {
+        navShown = true
         // Shorts has its own player; a video playing in the background stops
         if (cur is Screen.Shorts) app.playback.close()
     }
@@ -152,7 +174,7 @@ private fun Shell(app: AppState) {
         bottomBar = {
             Column {
                 if (app.playback.video != null && cur !is Screen.Watch && cur !is Screen.Shorts) MiniPlayer(app)
-                if (compact && cur !is Screen.Watch) {
+                if (compact && cur !is Screen.Watch) AnimatedVisibility(navShown || !autoHide, enter = expandVertically(), exit = shrinkVertically()) {
                     NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 0.dp) {
                         for (t in tabs(app)) {
                             val sel = root == t.screen
@@ -168,8 +190,9 @@ private fun Shell(app: AppState) {
         },
         snackbarHost = { SnackbarHost(app.snackbar) },
     ) { pad ->
-        Row(Modifier.fillMaxSize().padding(pad)) {
-            if (!compact) {
+        Row(Modifier.fillMaxSize().padding(pad).let { if (autoHide) it.nestedScroll(navScroll) else it }) {
+            // tablets: the side rail steps aside while watching, so the video gets the room
+            if (!compact && !(cur is Screen.Watch && app.platform.touch)) {
                 NavigationRail(containerColor = MaterialTheme.colorScheme.background) {
                     for (t in tabs(app)) {
                         val sel = root == t.screen
@@ -203,6 +226,29 @@ private fun Shell(app: AppState) {
         }
     }
 }
+
+/** Full screen; on a wide screen the comments can open beside the video (the button at the top right). */
+@Composable
+private fun FullscreenWatch(app: AppState) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
+        val token = app.playback.details?.commentsToken?.takeIf { !app.store.settings.value.hideComments }
+        val canSide = maxWidth > 840.dp && token != null
+        val panel = minOf(400.dp, maxWidth * 0.35f)
+        CompositionLocalProvider(LocalSideComments provides canSide) {
+            Row(Modifier.fillMaxSize()) {
+                VideoArea(app, Modifier.weight(1f).fillMaxHeight(), fullscreen = true)
+                if (canSide && app.fsComments) {
+                    Surface(Modifier.width(panel).fillMaxHeight(), color = MaterialTheme.colorScheme.background) {
+                        CommentsPanel(app, token!!) { app.fsComments = false }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** true when full screen can show the comments beside the video (a wide screen, a video with comments) */
+val LocalSideComments = compositionLocalOf { false }
 
 /** The TubeHaus mark (web/y/icon.svg): a teal house with an arched door and a play triangle in it */
 @Composable
@@ -253,12 +299,30 @@ private fun TopBar(app: AppState) {
 /** A newer version is out: get it now, later, or never for this one. */
 @Composable
 private fun UpdateDialog(app: AppState, r: app.tubehaus.engine.Remote.Release) {
+    // the download in the app (Android): null before it starts, then 0..1
+    var got by remember { mutableStateOf<Float?>(null) }
+    var failed by remember { mutableStateOf(false) }
     AlertDialog(
-        onDismissRequest = { app.update = null },
+        onDismissRequest = { if (got == null) app.update = null },
         title = { Text(tr("TubeHaus {v} is out").replace("{v}", r.version)) },
-        text = { Text(tr("You have {v}.").replace("{v}", VERSION) + " " + tr(r.download?.let { "Download it and install it over this one; your library stays." } ?: "Pick the file for your system on the release page.")) },
+        text = {
+            Column {
+                Text(tr("You have {v}.").replace("{v}", VERSION) + " " + tr(r.download?.let { "Download it and install it over this one; your library stays." } ?: "Pick the file for your system on the release page."))
+                got?.let { p ->
+                    LinearProgressIndicator(progress = { p }, modifier = Modifier.fillMaxWidth().padding(top = 14.dp))
+                    Text(if (p >= 1f) tr("Opening the installer...") else "${(p * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+                }
+                if (failed) Text(tr("The download failed. Opening the release page instead."), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
+            }
+        },
         confirmButton = {
-            TextButton(onClick = { app.platform.openExternal(r.download ?: r.page); app.update = null }) { Text(tr("Download")) }
+            TextButton(enabled = got == null, onClick = {
+                val url = r.download
+                val inApp = url != null && app.platform.installUpdate(url, { got = it }) { ok ->
+                    if (ok) app.update = null else { failed = true; app.platform.openExternal(r.page); app.update = null }
+                }
+                if (inApp) got = 0f else { app.platform.openExternal(url ?: r.page); app.update = null }
+            }) { Text(tr(if (app.platform.name == "android" && r.download != null) "Update now" else "Download")) }
         },
         dismissButton = {
             Row {

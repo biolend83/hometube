@@ -1,5 +1,7 @@
 package app.tubehaus.ui
 
+import androidx.compose.material.icons.filled.Comment
+import androidx.compose.material.icons.outlined.Comment
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -119,6 +121,10 @@ fun playerKey(app: AppState, key: Key): Boolean {
     return true
 }
 
+/** brightness the swipe works in (what the eye sees, gamma 2.2) and the screen's own value */
+private fun perceived(b: Float) = Math.pow(b.coerceIn(0f, 1f).toDouble(), 1 / 2.2).toFloat()
+private fun actual(p: Float) = Math.pow(p.coerceIn(0f, 1f).toDouble(), 2.2).toFloat().coerceAtLeast(0.004f)
+
 @Composable
 private fun Controls(app: AppState, fullscreen: Boolean) {
     val touch = app.platform.touch
@@ -171,7 +177,13 @@ private fun Controls(app: AppState, fullscreen: Boolean) {
             Modifier.fillMaxSize()
                 .pointerInput(touch, st.durationMs) {
                     detectTapGestures(
-                        onTap = { if (touch) { shown = !shown; poke++ } else toggle() },
+                        onTap = {
+                            when {
+                                !touch -> toggle()
+                                app.store.settings.value.tapToPause -> { toggle(); shown = true; poke++ }
+                                else -> { shown = !shown; poke++ }
+                            }
+                        },
                         onDoubleTap = { o ->
                             if (!touch) { app.setFull(!fullscreen); return@detectTapGestures }
                             val side = when {
@@ -195,13 +207,13 @@ private fun Controls(app: AppState, fullscreen: Boolean) {
                     detectVerticalDragGestures(
                         onDragStart = { o ->
                             kind = if (o.x < size.width / 2) "brightness" else "volume"
-                            level = (if (kind == "brightness") app.platform.brightness() else app.platform.mediaVolume()) ?: -1f
+                            level = (if (kind == "brightness") app.platform.brightness()?.let { perceived(it) } else app.platform.mediaVolume()) ?: -1f
                         },
                         onVerticalDrag = { change, dy ->
                             if (level >= 0) {
                                 change.consume()
                                 level = (level - dy / (size.height * 0.8f)).coerceIn(0f, 1f)
-                                if (kind == "brightness") app.platform.setBrightness(level) else app.platform.setMediaVolume(level)
+                                if (kind == "brightness") app.platform.setBrightness(actual(level)) else app.platform.setMediaVolume(level)
                                 gesture = kind to level
                             }
                         },
@@ -346,8 +358,11 @@ private fun MouseOverlay(
                 IconButton(onClick = { app.setFull(false) }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Back"), tint = Color.White) }
                 Text(
                     app.playback.video?.title ?: "", color = Color.White, style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                 )
+                if (LocalSideComments.current) IconButton(onClick = { app.fsComments = !app.fsComments }) {
+                    Icon(if (app.fsComments) Icons.Filled.Comment else Icons.Outlined.Comment, tr("Comments"), tint = Color.White)
+                }
             }
         }
         if (st.ended) {
