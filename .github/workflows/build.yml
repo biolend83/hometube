@@ -4,9 +4,9 @@ on:
   # this branch's own builds: app releases are tagged app-v* (v* belongs to the server)
   push:
     branches: [android-app, windows-app]
-    # app-v*: Android releases (the APK is signed and uploaded by hand)
-    # desktop-v*: Windows and Linux releases (win-v*: the older Windows-only ones)
-    tags: ["app-v*", "desktop-v*", "win-v*"]
+    # app-v*: one release per version with every platform's file (the APK is signed and
+    # uploaded by hand); desktop-v*: only the bridge for desktop apps up to 0.3.6, which look there
+    tags: ["app-v*", "desktop-v*"]
   workflow_dispatch:
 
 permissions:
@@ -131,8 +131,7 @@ jobs:
           path: TubeHaus-*.dmg
 
   release:
-    # desktop releases only: Android releases (app-v*) are published by hand with the locally signed APK
-    if: startsWith(github.ref, 'refs/tags/desktop-v') || startsWith(github.ref, 'refs/tags/win-v')
+    if: startsWith(github.ref, 'refs/tags/app-v') || startsWith(github.ref, 'refs/tags/desktop-v')
     needs: [android, windows, linux, mac]
     runs-on: ubuntu-latest
     permissions:
@@ -145,12 +144,11 @@ jobs:
         # only the desktop files: APKs built here are signed with a throwaway key and could
         # not update the ones already installed, so the APK is always uploaded by hand
         run: |
-          files="windows/*.msi"
-          case "$GITHUB_REF_NAME" in desktop-v*) files="$files linux/*.deb linux/*.rpm linux/*.tar.gz mac/*.dmg";; esac
+          files="windows/*.msi mac/*.dmg linux/*.deb linux/*.rpm linux/*.tar.gz"
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" $files --repo "$GITHUB_REPOSITORY" --clobber
           else
             # a pre-release, so it never becomes the server's "latest release"
-            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "TubeHaus desktop ${GITHUB_REF_NAME#*-v}" \
-              --prerelease --latest=false --notes "Windows, macOS and Linux" $files
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "TubeHaus ${GITHUB_REF_NAME#*-v} · Android, Windows, macOS, Linux" \
+              --prerelease --latest=false --notes "Android, Windows, macOS and Linux" $files
           fi
