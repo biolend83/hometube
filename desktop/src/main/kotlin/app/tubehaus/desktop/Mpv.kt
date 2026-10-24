@@ -60,13 +60,23 @@ interface LibMpv : Library {
             for (name in listOf("mpv-2", "mpv", "libmpv.so.2", "libmpv.so.1", "libmpv.2.dylib")) {
                 try {
                     return Native.load(name, LibMpv::class.java, mapOf(Library.OPTION_STRING_ENCODING to "UTF-8"))
-                } catch (_: UnsatisfiedLinkError) {}
+                } catch (e: UnsatisfiedLinkError) {
+                    if (name == "mpv-2") firstError = e.message?.lineSequence()?.firstOrNull()?.take(200)
+                }
             }
             return null
         }
 
-        val MISSING = System.getProperty("os.name").let { os ->
+        private var firstError: String? = null
+
+        /** libmpv-2.dll is there but Windows wouldn't load it: one of the DLLs it needs is missing */
+        private val dllPresent: Boolean get() =
+            System.getProperty("jna.library.path")?.split(java.io.File.pathSeparator)?.any { java.io.File(it, "libmpv-2.dll").exists() } == true
+
+        val MISSING: String get() = System.getProperty("os.name").let { os ->
             when {
+                os.startsWith("Windows") && dllPresent ->
+                    "mpv couldn't start (" + (firstError ?: "unknown error") + "). Updating your graphics driver usually fixes this."
                 os.startsWith("Windows") -> "mpv is missing: put libmpv-2.dll next to TubeHaus"
                 os.startsWith("Mac") -> "mpv is missing: install it with Homebrew (brew install mpv), then open TubeHaus again"
                 else -> "mpv is missing: install libmpv (Debian/Ubuntu: sudo apt install libmpv2, Fedora: sudo dnf install mpv-libs, Arch: mpv)"
