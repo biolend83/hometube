@@ -119,14 +119,15 @@ private fun RegionPicker(app: AppState, changed: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     val now = s.region.ifEmpty { app.platform.deviceRegion() }.uppercase()
     Box {
-        AssistChip(onClick = { open = true }, label = { Text(now) }, leadingIcon = { Icon(Icons.Outlined.Public, null, Modifier.size(18.dp)) })
+        val name = java.util.Locale("", now).getDisplayCountry(java.util.Locale(InnerTube.hl)).ifEmpty { now }
+        AssistChip(onClick = { open = true }, label = { Text(name) }, leadingIcon = { Icon(Icons.Outlined.Public, null, Modifier.size(18.dp)) })
         DropdownMenu(open, onDismissRequest = { open = false }) {
             val common = listOf("US", "GB", "CA", "AU", "IN", "DE", "FR", "ES", "IT", "NL", "TR", "BR", "MX", "JP", "KR", "ID")
             DropdownMenuItem(text = { Text(tr("This device") + " (" + app.platform.deviceRegion().uppercase() + ")") }, onClick = {
                 open = false; app.store.settings.update { it.copy(region = "") }; changed()
             })
             for (c in common) DropdownMenuItem(
-                text = { Text(c + "  " + java.util.Locale("", c).getDisplayCountry(java.util.Locale(InnerTube.hl))) },
+                text = { Text(java.util.Locale("", c).getDisplayCountry(java.util.Locale(InnerTube.hl)) + "  ·  " + c) },
                 onClick = { open = false; app.store.settings.update { it.copy(region = c) }; changed() },
             )
             DropdownMenuItem(text = { Text(tr("Other...")) }, onClick = { open = false; app.go(Screen.Settings) })
