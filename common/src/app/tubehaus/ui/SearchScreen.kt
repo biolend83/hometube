@@ -1,5 +1,7 @@
 package app.tubehaus.ui
 
+import androidx.compose.material.icons.automirrored.outlined.ViewList
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -105,9 +107,18 @@ fun SearchScreen(app: AppState, initial: String) {
             return@Column
         }
         if (query.isEmpty()) return@Column
-        LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(listOf(YouTube.Filter.ALL to "All", YouTube.Filter.VIDEOS to "Videos", YouTube.Filter.CHANNELS to "Channels", YouTube.Filter.PLAYLISTS to "Playlists")) { (f, label) ->
-                FilterChip(filter == f, onClick = { filter = f }, label = { Text(tr(label)) })
+        val compact = LocalCompact.current
+        val grid = app.store.settings.value.searchGrid
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            LazyRow(Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(listOf(YouTube.Filter.ALL to "All", YouTube.Filter.VIDEOS to "Videos", YouTube.Filter.CHANNELS to "Channels", YouTube.Filter.PLAYLISTS to "Playlists")) { (f, label) ->
+                    FilterChip(filter == f, onClick = { filter = f }, label = { Text(tr(label)) })
+                }
+            }
+            // phones always show one card per row; wider screens can pick a list or a grid
+            if (!compact) IconButton(onClick = { app.store.settings.update { it.copy(searchGrid = !grid) } }) {
+                if (grid) Icon(Icons.AutoMirrored.Outlined.ViewList, tr("Show as a list"))
+                else Icon(Icons.Outlined.GridView, tr("Show as a grid"))
             }
         }
         val pager = rememberPager(query to filter, { YouTube.search(query, filter) }, { YouTube.searchMore(it) })
@@ -117,7 +128,7 @@ fun SearchScreen(app: AppState, initial: String) {
             pager.items.isEmpty() && pager.started -> Empty(tr("No results"))
             else -> ItemGrid(
                 pager.items.filter { !(app.noShorts && it is Video && it.short) }, app,
-                loading = pager.loading, onEnd = { pager.loadMore() }, rows = !LocalCompact.current,
+                loading = pager.loading, onEnd = { pager.loadMore() }, rows = !compact && !grid,
             )
         }
     }

@@ -91,6 +91,12 @@ data class Settings(
     val hideRelated: Boolean = false,
     /** once a day: a newer app version, and the stream client list (engine/Remote.kt) */
     val checkUpdates: Boolean = true,
+    /** text size: 1 normal, up to 1.5 */
+    val textScale: Float = 1f,
+    /** search results as a grid of cards on wide screens (a list by default) */
+    val searchGrid: Boolean = false,
+    /** Android: hide the status and navigation bars everywhere, not only in full screen */
+    val hideBars: Boolean = false,
     val checkedAt: Long = 0,
     val skipVersion: String = "",
 )

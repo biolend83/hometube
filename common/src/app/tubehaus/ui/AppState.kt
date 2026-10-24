@@ -1,5 +1,6 @@
 package app.tubehaus.ui
 
+import app.tubehaus.engine.YouTube
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -30,6 +31,8 @@ sealed interface Screen {
     data class Playlist(val id: String, val title: String = "") : Screen
     /** a list kept on this device: "wl", "likes" or one of your playlists (HP...) */
     data class Local(val key: String) : Screen
+    /** the subscribed channels, to remove some or all */
+    data object ManageSubs : Screen
 }
 
 val TABS = listOf(Screen.Home, Screen.Shorts, Screen.Subs, Screen.Library)
@@ -43,6 +46,34 @@ class AppState(val platform: Platform, val store: Store) {
         InnerTube.identityFile = java.io.File(platform.dataDir, "identity.json")
         Remote.clientsFile = java.io.File(platform.dataDir, "clients.json")
         Remote.restoreClients()
+    }
+
+    @Volatile private var filling = false
+
+    /**
+     * Subscriptions imported from Google Takeout and other apps come without channel pictures
+     * (and some without names): look each one up, four at a time.
+     */
+    fun fillSubInfo() {
+        if (filling) return
+        val missing = store.lib.value.subs.filter { (cid, s) -> s.thumb.isEmpty() || s.name.isEmpty() || s.name == cid }.keys.take(500)
+        if (missing.isEmpty()) return
+        filling = true
+        scope.launch {
+            try {
+                val gate = kotlinx.coroutines.sync.Semaphore(4)
+                kotlinx.coroutines.coroutineScope {
+                    for (cid in missing) launch {
+                        gate.acquire()
+                        try {
+                            val c = YouTube.channel(cid)
+                            store.updateSub(cid, c.name, c.avatar)
+                        } catch (_: Exception) {
+                        } finally { gate.release() }
+                    }
+                }
+            } finally { filling = false }
+        }
     }
 
     /** a newer version to offer, found by [checkForUpdates] */

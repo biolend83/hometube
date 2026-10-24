@@ -74,6 +74,14 @@ class Store(dir: File) {
         l.copy(subs = if (on) l.subs + (cid to Sub(name, thumb, now())) else l.subs - cid)
     }
 
+    /** fills in a channel's name and picture (imports often come without them); keeps the subscription date */
+    fun updateSub(cid: String, name: String, thumb: String) = lib.update { l ->
+        val s = l.subs[cid] ?: return@update l
+        l.copy(subs = l.subs + (cid to s.copy(name = name.ifEmpty { s.name }, thumb = thumb.ifEmpty { s.thumb })))
+    }
+
+    fun unsubscribeAll() = lib.update { it.copy(subs = emptyMap()) }
+
     // ---------------------------------------------------------- history and resume points
     fun savePosition(v: Video, seconds: Long, length: Long) {
         if (settings.value.historyOff) return

@@ -1,5 +1,7 @@
 package app.tubehaus.ui
 
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -77,6 +79,9 @@ fun SubsScreen(app: AppState) {
                 Text(tr("The subscription feed is off. Open a channel to see its videos."), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
             }
+            item {
+                TextButton(onClick = { app.go(Screen.ManageSubs) }, modifier = Modifier.padding(horizontal = 8.dp)) { Text(tr("Manage subscriptions")) }
+            }
             items(lib.subs.entries.sortedBy { it.value.name.lowercase() }.toList(), key = { it.key }) { (cid, s) ->
                 Row(
                     Modifier.fillMaxWidth().clickable { app.go(Screen.Channel(cid, s.name)) }.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -101,11 +106,54 @@ fun SubsScreen(app: AppState) {
                         }
                     }
                 }
-                Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp), contentAlignment = Alignment.CenterEnd) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = { app.go(Screen.ManageSubs) }) { Text(tr("Manage")) }
                     TextButton(onClick = { scope.launch { load(true) } }) { Text(tr("Refresh")) }
                 }
             }
         },
+    )
+}
+
+/** Every subscribed channel, to remove one or all of them. */
+@Composable
+fun ManageSubsScreen(app: AppState) {
+    val lib by app.store.lib.state.collectAsState()
+    var confirm by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { app.fillSubInfo() }
+    val subs = lib.subs.entries.sortedBy { it.value.name.lowercase() }.toList()
+    LazyColumn(Modifier.fillMaxSize()) {
+        item {
+            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("{n} channels").replace("{n}", "${subs.size}"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                if (subs.isNotEmpty()) TextButton(onClick = { confirm = true }) { Text(tr("Unsubscribe from all"), color = MaterialTheme.colorScheme.error) }
+            }
+        }
+        if (subs.isEmpty()) item {
+            Text(tr("No subscriptions"), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
+        }
+        items(subs, key = { it.key }) { (cid, s) ->
+            Row(
+                Modifier.fillMaxWidth().clickable { app.go(Screen.Channel(cid, s.name)) }.padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Avatar(s.thumb, 40)
+                Text(s.name.ifEmpty { cid }, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 14.dp).weight(1f))
+                IconButton(onClick = { app.store.subscribe(cid, s.name, s.thumb, false) }) {
+                    Icon(Icons.Outlined.Close, tr("Unsubscribe"))
+                }
+            }
+        }
+    }
+    if (confirm) AlertDialog(
+        onDismissRequest = { confirm = false },
+        title = { Text(tr("Unsubscribe from all {n} channels?").replace("{n}", "${subs.size}")) },
+        text = { Text(tr("Your history and playlists stay. You can import subscriptions again at any time.")) },
+        confirmButton = {
+            TextButton(onClick = { app.store.unsubscribeAll(); confirm = false }) { Text(tr("Unsubscribe from all"), color = MaterialTheme.colorScheme.error) }
+        },
+        dismissButton = { TextButton(onClick = { confirm = false }) { Text(tr("Cancel")) } },
     )
 }
 
@@ -274,6 +322,7 @@ fun importFile(app: AppState, done: (Boolean) -> Unit = {}) {
             return@openTextFile done(false)
         }
         val r = Transfer.merge(app.store, p)
+        app.fillSubInfo()
         app.toast(
             tr("Imported from {f}: {s} subscriptions, {h} history, {p} playlists")
                 .replace("{f}", r.format).replace("{s}", "${r.subs}").replace("{h}", "${r.hist}").replace("{p}", "${r.playlists}"),

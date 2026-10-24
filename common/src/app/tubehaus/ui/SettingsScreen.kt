@@ -35,7 +35,7 @@ import app.tubehaus.data.Transfer
 import app.tubehaus.rec.Learn
 import kotlin.math.abs
 
-const val VERSION = "0.3.3"
+const val VERSION = "0.3.4"
 
 @Composable
 fun SettingsScreen(app: AppState) {
@@ -54,6 +54,14 @@ fun SettingsScreen(app: AppState) {
             item {
                 Choice(tr("Theme"), listOf(tr("Follow the system"), tr("Light"), tr("Dark"))[s.dark],
                     listOf("0" to tr("Follow the system"), "1" to tr("Light"), "2" to tr("Dark"))) { c -> set { it.copy(dark = c.toInt()) } }
+            }
+            item {
+                val sizes = listOf(1f to tr("Normal"), 1.15f to tr("Large"), 1.3f to tr("Larger"), 1.5f to tr("Largest"))
+                Choice(tr("Text size"), sizes.firstOrNull { it.first == s.textScale }?.second ?: tr("Normal"),
+                    sizes.map { "${it.first}" to it.second }) { c -> set { it.copy(textScale = c.toFloat()) } }
+            }
+            if (app.platform.name == "android") item {
+                Toggle(tr("Hide system bars"), tr("Hide the status and navigation bars everywhere. Swipe from the edge to see them."), s.hideBars) { b -> set { it.copy(hideBars = b) } }
             }
             item { Toggle(tr("Calm mode"), tr("No view counts, no Shorts, nothing plays by itself"), s.calm) { b -> set { it.copy(calm = b) } } }
 
@@ -81,6 +89,7 @@ fun SettingsScreen(app: AppState) {
             item { Toggle(tr("Pause watch history"), tr("Videos you watch aren't added to history and don't shape recommendations"), s.historyOff) { b -> set { it.copy(historyOff = b) } } }
             item { SItem(tr("What TubeHaus learned about you"), tr("See and change what your recommendations are based on")) { app.go(Screen.Learned) } }
             item { SItem(tr("Import"), tr("Subscriptions, history and playlists from YouTube (Google Takeout), NewPipe, FreeTube, Invidious, TubeHaus or OPML")) { importFile(app) } }
+            item { SItem(tr("Manage subscriptions"), tr("Remove channels, or all of them")) { app.go(Screen.ManageSubs) } }
             item { SItem(tr("Export"), tr("A backup you can import here, into TubeHaus on a server, or into other apps")) { dialog = "export" } }
             item { SItem(tr("Clear watch history"), "") { dialog = "clear" } }
 

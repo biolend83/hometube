@@ -1,5 +1,7 @@
 package app.tubehaus.ui
 
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -133,7 +135,20 @@ fun WatchScreen(app: AppState) {
 private fun PlayerBox(app: AppState) {
     val pb = app.playback
     val st by app.platform.player.state.collectAsState()
-    Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(Color.Black)) {
+    val compact = LocalCompact.current
+    Box(
+        Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(Color.Black)
+            // phones: swipe the video down to keep it playing in the mini player and go back
+            .pointerInput(compact) {
+                if (!compact) return@pointerInput
+                var pulled = 0f
+                detectVerticalDragGestures(
+                    onDragStart = { pulled = 0f },
+                    onVerticalDrag = { _, dy -> pulled += dy },
+                    onDragEnd = { if (pulled > 80.dp.toPx()) app.back() },
+                )
+            },
+    ) {
         val v = pb.video
         when {
             pb.error != null -> Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
