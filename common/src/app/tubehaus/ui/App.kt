@@ -1,5 +1,7 @@
 package app.tubehaus.ui
 
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -153,8 +155,9 @@ private fun Shell(app: AppState) {
     val compact = LocalCompact.current
     val root = app.stack.firstOrNull()
     val showTop = cur !is Screen.Watch && cur !is Screen.Shorts && cur !is Screen.Search
-    // phones: the tabs slide away while scrolling down and come back scrolling up
-    val autoHide = compact && app.store.settings.state.collectAsState().value.autoHideNav
+    // touch screens: the tabs (bottom on phones, the side rail on tablets) and the top bar slide away
+    // while scrolling down and come back scrolling up
+    val autoHide = app.platform.touch && app.store.settings.state.collectAsState().value.autoHideNav
     var navShown by remember { mutableStateOf(true) }
     val navScroll = remember {
         object : NestedScrollConnection {
@@ -170,7 +173,7 @@ private fun Shell(app: AppState) {
         if (cur is Screen.Shorts) app.playback.close()
     }
     Scaffold(
-        topBar = { if (showTop) TopBar(app) },
+        topBar = { if (showTop) AnimatedVisibility(navShown || !autoHide, enter = expandVertically(), exit = shrinkVertically()) { TopBar(app) } },
         bottomBar = {
             Column {
                 if (app.playback.video != null && cur !is Screen.Watch && cur !is Screen.Shorts) MiniPlayer(app)
@@ -192,7 +195,7 @@ private fun Shell(app: AppState) {
     ) { pad ->
         Row(Modifier.fillMaxSize().padding(pad).let { if (autoHide) it.nestedScroll(navScroll) else it }) {
             // tablets: the side rail steps aside while watching, so the video gets the room
-            if (!compact && !(cur is Screen.Watch && app.platform.touch)) {
+            if (!compact && !(cur is Screen.Watch && app.platform.touch)) AnimatedVisibility(navShown || !autoHide, enter = expandHorizontally(), exit = shrinkHorizontally()) {
                 NavigationRail(containerColor = MaterialTheme.colorScheme.background) {
                     for (t in tabs(app)) {
                         val sel = root == t.screen
@@ -232,7 +235,7 @@ private fun Shell(app: AppState) {
 private fun FullscreenWatch(app: AppState) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
         val token = app.playback.details?.commentsToken?.takeIf { !app.store.settings.value.hideComments }
-        val canSide = maxWidth > 840.dp && token != null
+        val canSide = maxWidth > 600.dp && token != null
         val panel = minOf(400.dp, maxWidth * 0.35f)
         CompositionLocalProvider(LocalSideComments provides canSide) {
             Row(Modifier.fillMaxSize()) {

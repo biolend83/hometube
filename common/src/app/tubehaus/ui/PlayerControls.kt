@@ -175,12 +175,13 @@ private fun Controls(app: AppState, fullscreen: Boolean) {
         // taps and clicks anywhere on the video
         Box(
             Modifier.fillMaxSize()
-                .pointerInput(touch, st.durationMs) {
+                .pointerInput(touch, st.durationMs, w) {
                     detectTapGestures(
-                        onTap = {
+                        onTap = { o ->
                             when {
                                 !touch -> toggle()
-                                app.store.settings.value.tapToPause -> { toggle(); shown = true; poke++ }
+                                // tap to pause: the middle of the video; the outer quarters only show or hide the controls
+                                app.store.settings.value.tapToPause && o.x in w * 0.25f..w * 0.75f -> { toggle(); shown = true; poke++ }
                                 else -> { shown = !shown; poke++ }
                             }
                         },
