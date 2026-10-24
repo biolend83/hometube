@@ -193,6 +193,12 @@ class MpvPlayer : VideoPlayer {
         lib!!.mpv_command(p, arrayOf(*a, null))
     }
 
+    /** Settings → Read further ahead: 20 minutes and up to 2 GB instead of 5 minutes and 500 MB */
+    override fun setReadAhead(long: Boolean) {
+        set("cache-secs", if (long) "1200" else "300"); set("demuxer-readahead-secs", if (long) "1200" else "300")
+        set("demuxer-max-bytes", if (long) "2GiB" else "500MiB")
+    }
+
     private fun set(k: String, v: String) {
         val p = mpv() ?: return
         lib!!.mpv_set_property_string(p, k, v)

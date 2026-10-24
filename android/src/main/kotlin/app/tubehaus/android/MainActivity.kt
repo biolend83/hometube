@@ -1,5 +1,8 @@
 package app.tubehaus.android
 
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import android.Manifest
 import android.app.PictureInPictureParams
 import android.content.ComponentName
@@ -56,6 +59,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         tube.platform.activity = this
+        if (Build.VERSION.SDK_INT >= 31) lifecycleScope.launch {
+            state.platform.player.state.map { it.playing }.distinctUntilChanged().collect { runCatching { setPictureInPictureParams(pipParams()) } }
+        }
         setContent {
             Box(Modifier.fillMaxSize().let { if (state.fullscreen || state.pip) it else it.safeDrawingPadding() }) { App(state) }
         }
@@ -164,6 +170,7 @@ class MainActivity : ComponentActivity() {
         super.onConfigurationChanged(newConfig)
         if (state.pip) return
         val landscape = newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE
+        if (newConfig.smallestScreenWidthDp >= 600) return
         if (landscape && !state.fullscreen && state.current is Screen.Watch && state.playback.video != null) {
             state.fullscreen = true; bars(false)
         } else if (!landscape && state.fullscreen) {
@@ -171,13 +178,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun watchingVideo() = state.current is Screen.Watch && state.platform.player.state.value.playing
+    private fun watchingVideo() = state.playback.video != null && state.platform.player.state.value.playing
+
+    private fun pipParams(): PictureInPictureParams {
+        val b = PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9))
+        if (Build.VERSION.SDK_INT >= 31) b.setAutoEnterEnabled(watchingVideo()).setSeamlessResizeEnabled(true)
+        return b.build()
+    }
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         // going home while a video plays: keep it in a small window
         if (watchingVideo() && Build.VERSION.SDK_INT >= 26) {
-            runCatching { enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build()) }
+            runCatching { enterPictureInPictureMode(pipParams()) }
         }
     }
 

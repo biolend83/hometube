@@ -35,7 +35,7 @@ import app.tubehaus.data.Transfer
 import app.tubehaus.rec.Learn
 import kotlin.math.abs
 
-const val VERSION = "0.3.7"
+const val VERSION = "0.3.8"
 
 @Composable
 fun SettingsScreen(app: AppState) {
@@ -60,6 +60,12 @@ fun SettingsScreen(app: AppState) {
                 Choice(tr("Text size"), sizes.firstOrNull { it.first == s.textScale }?.second ?: tr("Normal"),
                     sizes.map { "${it.first}" to it.second }) { c -> set { it.copy(textScale = c.toFloat()) } }
             }
+            if (app.platform.touch) item {
+                Toggle(tr("Hide the tabs while scrolling"), tr("On phones, Home, Subscriptions and Library slide away as you scroll down"), s.autoHideNav) { b -> set { it.copy(autoHideNav = b) } }
+            }
+            if (app.platform.touch) item {
+                Toggle(tr("Search box at the bottom"), tr("On phones, within reach of your thumb"), s.searchAtBottom) { b -> set { it.copy(searchAtBottom = b) } }
+            }
             if (app.platform.name == "android") item {
                 Toggle(tr("Hide system bars"), tr("Hide the status and navigation bars everywhere. Swipe from the edge to see them."), s.hideBars) { b -> set { it.copy(hideBars = b) } }
             }
@@ -80,6 +86,17 @@ fun SettingsScreen(app: AppState) {
                 Choice(tr("Quality on mobile data"), hLabel(s.maxHeightMobileData), heights.map { "$it" to hLabel(it) }) { c -> set { it.copy(maxHeightMobileData = c.toInt()) } }
             }
             item { Toggle(tr("Autoplay"), tr("Play the next video when one ends"), s.autoplay) { b -> set { it.copy(autoplay = b) } } }
+            if (app.platform.touch) item {
+                Toggle(tr("Tap the video to pause"), tr("A tap plays or pauses; the controls show with it"), s.tapToPause) { b -> set { it.copy(tapToPause = b) } }
+            }
+            item {
+                Toggle(tr("Read further ahead"), tr("About 20 minutes of the video instead of 5, for fewer stops on a fast connection. Uses more memory") +
+                    if (app.platform.name == "android") " " + tr("(from the next start)") else "", s.longBuffer) { b -> set { it.copy(longBuffer = b) } }
+            }
+            item {
+                Choice(tr("Beside the video"), tr(if (s.sideTab == "comments") "Comments" else "Up next"),
+                    listOf("next" to tr("Up next"), "comments" to tr("Comments"))) { c -> set { it.copy(sideTab = c) } }
+            }
             item { Toggle(tr("Captions"), tr("Turn captions on when a video has them"), s.captions) { b -> set { it.copy(captions = b) } } }
             if (app.platform.name == "android") item {
                 Toggle(tr("Background play"), tr("Keep playing with the screen off or in another app"), s.backgroundPlay) { b -> set { it.copy(backgroundPlay = b) } }

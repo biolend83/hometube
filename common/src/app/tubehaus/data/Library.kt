@@ -97,6 +97,16 @@ data class Settings(
     val searchGrid: Boolean = false,
     /** Android: hide the status and navigation bars everywhere, not only in full screen */
     val hideBars: Boolean = false,
+    /** phones: the bottom tabs slide away while scrolling down and come back scrolling up */
+    val autoHideNav: Boolean = true,
+    /** touch screens: a tap on the video plays or pauses it (else it shows the controls) */
+    val tapToPause: Boolean = false,
+    /** read about 20 minutes ahead instead of 5 (more memory) */
+    val longBuffer: Boolean = false,
+    /** what the panel beside the video shows first on wide screens: "next" or "comments" */
+    val sideTab: String = "next",
+    /** phones: the search box at the bottom, within reach of a thumb */
+    val searchAtBottom: Boolean = false,
     val checkedAt: Long = 0,
     val skipVersion: String = "",
 )

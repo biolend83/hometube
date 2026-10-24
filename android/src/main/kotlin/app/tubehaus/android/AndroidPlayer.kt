@@ -53,6 +53,13 @@ import kotlinx.coroutines.launch
  */
 @OptIn(UnstableApi::class)
 class AndroidPlayer(private val ctx: Context) : VideoPlayer {
+    companion object {
+        /** Settings → Read further ahead, set before the player is first made */
+        @Volatile var longBuffer = false
+    }
+
+    override fun setReadAhead(long: Boolean) { longBuffer = long }
+
     private val st = MutableStateFlow(PlayerState())
     override val state: StateFlow<PlayerState> = st
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -65,11 +72,13 @@ class AndroidPlayer(private val ctx: Context) : VideoPlayer {
         .setHandleAudioBecomingNoisy(true)
         .setSeekBackIncrementMs(10_000)
         .setSeekForwardIncrementMs(10_000)
-        // read far ahead (up to 5 minutes, within ExoPlayer's memory budget) so a slow patch of network doesn't stop the video
+        // read far ahead (up to 5 minutes, within ExoPlayer's memory budget) so a slow patch of network doesn't stop the video;
+        // Settings → Read further ahead: up to 20 minutes, with up to 400 MB for it
         .setLoadControl(
             DefaultLoadControl.Builder()
-                .setBufferDurationsMs(60_000, 300_000, 1_500, 3_000)
+                .setBufferDurationsMs(60_000, if (longBuffer) 1_200_000 else 300_000, 1_500, 3_000)
                 .setBackBuffer(30_000, true)
+                .apply { if (longBuffer) setTargetBufferBytes(400 * 1024 * 1024).setPrioritizeTimeOverSizeThresholds(true) }
                 .build(),
         )
         .build()

@@ -1,5 +1,6 @@
 package app.tubehaus.ui
 
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -168,12 +169,12 @@ fun VideoCard(v: Video, app: AppState, queue: List<Video> = emptyList()) {
 
 /** Compact row: small thumbnail on the left (related videos, playlists, history). */
 @Composable
-fun VideoRow(v: Video, app: AppState, queue: List<Video> = emptyList(), extra: List<Pair<String, () -> Unit>> = emptyList(), onClick: (() -> Unit)? = null) {
+fun VideoRow(v: Video, app: AppState, queue: List<Video> = emptyList(), extra: List<Pair<String, () -> Unit>> = emptyList(), thumbWidth: Dp = 168.dp, onClick: (() -> Unit)? = null) {
     val calm = app.store.settings.value.calm
     Row(
         Modifier.fillMaxWidth().clickable { if (onClick != null) onClick() else app.watch(v, queue) }.padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
-        if (!app.store.settings.value.hideThumbs) Thumb(v, app, Modifier.width(168.dp), rounded = 8)
+        if (!app.store.settings.value.hideThumbs) Thumb(v, app, Modifier.width(thumbWidth), rounded = 8)
         Column(Modifier.weight(1f).padding(start = 10.dp)) {
             Text(v.title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(v.details(app, calm), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,

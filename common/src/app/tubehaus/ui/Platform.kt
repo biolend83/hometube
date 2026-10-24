@@ -25,6 +25,11 @@ interface Platform {
     /** lets the user pick a file; calls [done] with its text (null when cancelled) */
     fun openTextFile(done: (String?) -> Unit)
     fun setFullscreen(on: Boolean)
+    /**
+     * Downloads [url] (an app update) and opens the system installer; false when this platform
+     * can't, and the release page is opened instead.
+     */
+    fun installUpdate(url: String, progress: (Float) -> Unit, done: (Boolean) -> Unit): Boolean = false
     /** Android: hide the status and navigation bars outside full screen too */
     fun setImmersive(on: Boolean) {}
     /** screen brightness for the player's swipe gesture, 0..1; null where there is none (the desktop) */
@@ -92,6 +97,8 @@ interface VideoPlayer {
     fun setHeight(h: Int)
     fun setCaptions(c: Caption?, translateTo: String?)
     fun setLoop(on: Boolean)
+    /** read about 20 minutes ahead instead of 5 */
+    fun setReadAhead(long: Boolean) {}
     fun stop()
 
     /** phones use the system volume; the desktop has a slider of its own */

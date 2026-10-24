@@ -1,5 +1,10 @@
 package app.tubehaus.android
 
+import android.os.Handler
+import android.os.Looper
+import androidx.core.content.FileProvider
+import okhttp3.Request
+import app.tubehaus.engine.Net
 import android.app.Application
 import android.content.ActivityNotFoundException
 import android.content.Context
@@ -34,7 +39,10 @@ class AndroidPlatform(private val app: Application) : Platform {
     override val dataDir: File = File(app.filesDir, "tubehaus")
     override val cacheDir: File = app.cacheDir
     override val touch = true
-    val androidPlayer by lazy { AndroidPlayer(app) }
+    val androidPlayer by lazy {
+        AndroidPlayer.longBuffer = runCatching { (app as TubeApp).state.store.settings.value.longBuffer }.getOrDefault(false)
+        AndroidPlayer(app)
+    }
     override val player: VideoPlayer get() = androidPlayer
 
     /** set by the activity: runs file pickers and full screen, which need an Activity */
@@ -94,6 +102,42 @@ class AndroidPlatform(private val app: Application) : Platform {
     override fun setMediaVolume(v: Float) {
         val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         audio.setStreamVolume(AudioManager.STREAM_MUSIC, (v.coerceIn(0f, 1f) * max).roundToInt(), 0)
+    }
+
+    /** downloads the APK into the cache and hands it to the system installer (same signing key, so it updates in place) */
+    override fun installUpdate(url: String, progress: (Float) -> Unit, done: (Boolean) -> Unit): Boolean {
+        val main = Handler(Looper.getMainLooper())
+        Thread {
+            val ok = runCatching {
+                val dir = File(app.cacheDir, "updates").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
+                val apk = File(dir, "TubeHaus.apk")
+                Net.client.newCall(Request.Builder().url(url).build()).execute().use { r ->
+                    require(r.isSuccessful) { "HTTP ${r.code}" }
+                    val body = r.body ?: error("empty")
+                    val total = body.contentLength().takeIf { it > 0 } ?: -1
+                    body.byteStream().use { inp ->
+                        apk.outputStream().use { out ->
+                            val buf = ByteArray(64 * 1024)
+                            var got = 0L
+                            var shown = -1
+                            while (true) {
+                                val n = inp.read(buf)
+                                if (n < 0) break
+                                out.write(buf, 0, n); got += n
+                                val pct = if (total > 0) (got * 100 / total).toInt() else 0
+                                if (pct != shown) { shown = pct; main.post { progress(pct / 100f) } }
+                            }
+                        }
+                    }
+                }
+                val uri = FileProvider.getUriForFile(app, app.packageName + ".updates", apk)
+                main.post { progress(1f) }
+                app.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
+            }.isSuccess
+            main.post { done(ok) }
+        }.start()
+        return true
     }
 
     override fun metered(): Boolean =

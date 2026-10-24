@@ -1,5 +1,17 @@
 package app.tubehaus.ui
 
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Explore
+import androidx.compose.material.icons.outlined.Public
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.collectAsState
+import app.tubehaus.engine.InnerTube
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -64,7 +76,7 @@ fun HomeScreen(app: AppState) {
         loading = true; error = null
         try {
             val skip = if (more) HomeCache.items.map { it.id }.toSet() else emptySet()
-            val got = app.rec.home(40, skip)
+            val got = if (app.discover) app.rec.discover(40, skip) else app.rec.home(40, skip)
             if (!more) HomeCache.items.clear()
             HomeCache.items.addAll(got.filter { g -> HomeCache.items.none { it.id == g.id } })
             HomeCache.at = System.currentTimeMillis()
@@ -83,11 +95,42 @@ fun HomeScreen(app: AppState) {
             HomeCache.items, app, loading = loading,
             onEnd = { load(true) },
             header = {
-                Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp), contentAlignment = Alignment.CenterEnd) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    RegionPicker(app) { HomeCache.items.clear(); app.rec.clearCache(); scope.launch { load(false) } }
+                    FilterChip(app.discover, onClick = {
+                        app.discover = !app.discover; HomeCache.items.clear(); scope.launch { load(false) }
+                    }, label = { Text(tr("Discover")) }, leadingIcon = { Icon(Icons.Outlined.Explore, null, Modifier.size(18.dp)) },
+                        modifier = Modifier.padding(start = 8.dp))
+                    Spacer(Modifier.weight(1f))
                     TextButton(onClick = { app.rec.clearCache(); scope.launch { load(false) } }) { Text(tr("Refresh")) }
                 }
+                if (app.discover) Text(tr("Videos from topics you don't usually watch. Your likes aren't used here."),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
             },
         )
+    }
+}
+
+/** The region the feeds come from, switched from Home: a few common ones, or any two letters in Settings. */
+@Composable
+private fun RegionPicker(app: AppState, changed: () -> Unit) {
+    val s by app.store.settings.state.collectAsState()
+    var open by remember { mutableStateOf(false) }
+    val now = s.region.ifEmpty { app.platform.deviceRegion() }.uppercase()
+    Box {
+        AssistChip(onClick = { open = true }, label = { Text(now) }, leadingIcon = { Icon(Icons.Outlined.Public, null, Modifier.size(18.dp)) })
+        DropdownMenu(open, onDismissRequest = { open = false }) {
+            val common = listOf("US", "GB", "CA", "AU", "IN", "DE", "FR", "ES", "IT", "NL", "TR", "BR", "MX", "JP", "KR", "ID")
+            DropdownMenuItem(text = { Text(tr("This device") + " (" + app.platform.deviceRegion().uppercase() + ")") }, onClick = {
+                open = false; app.store.settings.update { it.copy(region = "") }; changed()
+            })
+            for (c in common) DropdownMenuItem(
+                text = { Text(c + "  " + java.util.Locale("", c).getDisplayCountry(java.util.Locale(InnerTube.hl))) },
+                onClick = { open = false; app.store.settings.update { it.copy(region = c) }; changed() },
+            )
+            DropdownMenuItem(text = { Text(tr("Other...")) }, onClick = { open = false; app.go(Screen.Settings) })
+        }
     }
 }
 

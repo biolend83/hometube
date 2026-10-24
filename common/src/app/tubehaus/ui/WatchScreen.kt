@@ -1,5 +1,6 @@
 package app.tubehaus.ui
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.animation.animateContentSize
@@ -81,7 +82,7 @@ fun WatchScreen(app: AppState) {
     val token = pb.details?.commentsToken?.takeIf { !set.hideComments }
     val hasRelated = !set.hideRelated || pb.queue.isNotEmpty()
     // the comments open beside (wide) or under (phone) the video, which keeps playing
-    var side by remember(v.id) { mutableStateOf(if (hasRelated) "next" else "comments") }
+    var side by remember(v.id) { mutableStateOf(if (hasRelated && set.sideTab != "comments") "next" else "comments") }
     var commentsOpen by remember(v.id) { mutableStateOf(false) }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = maxWidth > 840.dp
@@ -101,10 +102,8 @@ fun WatchScreen(app: AppState) {
                                 FilterChip(side == "comments", onClick = { side = "comments" }, label = { Text(tr("Comments")) })
                             }
                         }
-                        LazyColumn(Modifier.fillMaxSize()) {
-                            if (token != null && (side == "comments" || !hasRelated)) item { CommentList(app, token) }
-                            else related(app)
-                        }
+                        if (token != null && (side == "comments" || !hasRelated)) Comments(app, token)
+                        else LazyColumn(Modifier.fillMaxSize()) { related(app, big = false) }
                     }
                 }
             }
@@ -113,17 +112,12 @@ fun WatchScreen(app: AppState) {
                 PlayerBox(app)
                 if (commentsOpen && token != null) {
                     // the comments take the space under the video; the video keeps playing above
-                    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(tr("Comments"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { commentsOpen = false }) { Icon(Icons.Filled.Close, tr("Close")) }
-                    }
-                    HorizontalDivider()
-                    LazyColumn(Modifier.fillMaxSize()) { item { CommentList(app, token) } }
+                    CommentsPanel(app, token) { commentsOpen = false }
                 } else {
                     LazyColumn(Modifier.fillMaxSize()) {
                         item { Info(app, v) }
                         if (token != null) item { CommentsTeaser { commentsOpen = true } }
-                        related(app)
+                        related(app, big = true)
                     }
                 }
             }
@@ -254,7 +248,37 @@ private fun Chip(icon: ImageVector, label: String, onClick: () -> Unit) {
     )
 }
 
-private fun LazyListScope.related(app: AppState) {
+/** The comments with a title and a close button: under the video on a phone, beside it in full screen. */
+@Composable
+fun CommentsPanel(app: AppState, token: String, onClose: () -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Comments"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, tr("Close")) }
+        }
+        HorizontalDivider()
+        Comments(app, token)
+    }
+}
+
+/** A scrolling list of comments that loads the next page by itself when you reach the end. */
+@Composable
+private fun Comments(app: AppState, token: String) {
+    val pager = rememberPager(token, { YouTube.comments(token) }, { YouTube.comments(it) })
+    LazyColumn(Modifier.fillMaxSize()) {
+        if (pager.items.isEmpty() && pager.loading) item { Busy() }
+        if (pager.items.isEmpty() && pager.started && !pager.loading) item { Empty(tr("No comments")) }
+        items(pager.items, key = { "c" + it.id }) { CommentView(app, it) }
+        if (pager.next != null) item("more") {
+            // reaching the end asks for the next page
+            LaunchedEffect(pager.items.size) { pager.loadMore() }
+            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(24.dp)) }
+        }
+    }
+}
+
+/** big: phones show related videos as full-width cards, wide screens as rows with larger pictures */
+private fun LazyListScope.related(app: AppState, big: Boolean) {
     val pb = app.playback
     val queue = pb.queue
     if (queue.isNotEmpty()) {
@@ -267,7 +291,7 @@ private fun LazyListScope.related(app: AppState) {
     val d = pb.details ?: run { item { Busy() }; return }
     items(d.related.filter { !(app.noShorts && it is Video && it.short) }, key = { "r" + it.id }) {
         when (it) {
-            is Video -> VideoRow(it, app)
+            is Video -> if (big) VideoCard(it, app) else VideoRow(it, app, thumbWidth = 200.dp)
             is Playlist -> PlaylistRow(it, app)
             is Channel -> ChannelRow(it, app)
         }
@@ -283,19 +307,6 @@ private fun CommentsTeaser(open: () -> Unit) {
     ) { Text(tr("Comments"), style = MaterialTheme.typography.titleSmall) }
 }
 
-@Composable
-private fun CommentList(app: AppState, token: String) {
-    val pager = rememberPager(token, { YouTube.comments(token) }, { YouTube.comments(it) })
-    val scope = rememberCoroutineScope()
-    Column {
-        if (pager.items.isEmpty() && pager.loading) Busy()
-        if (pager.items.isEmpty() && pager.started && !pager.loading) Empty(tr("No comments"))
-        for (c in pager.items) CommentView(app, c)
-        if (pager.next != null) TextButton(onClick = { scope.launch { pager.loadMore() } }, modifier = Modifier.padding(horizontal = 8.dp)) {
-            Text(tr(if (pager.loading) "Loading..." else "More comments"))
-        }
-    }
-}
 
 @Composable
 private fun CommentView(app: AppState, c: Comment, reply: Boolean = false) {

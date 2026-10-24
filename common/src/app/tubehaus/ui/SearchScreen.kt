@@ -1,5 +1,7 @@
 package app.tubehaus.ui
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.foundation.clickable
@@ -50,6 +52,8 @@ fun SearchScreen(app: AppState, initial: String) {
     var suggestions by remember { mutableStateOf<List<String>>(emptyList()) }
     val focus = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
+    // read as state, so switching list/grid or moving the box redraws at once
+    val prefs by app.store.settings.state.collectAsState()
 
     fun submit(q: String) {
         val t = q.trim()
@@ -79,8 +83,9 @@ fun SearchScreen(app: AppState, initial: String) {
     }
     LaunchedEffect(Unit) { if (initial.isEmpty()) runCatching { focus.requestFocus() } }
 
-    Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
+    @Composable
+    fun SearchBox(modifier: Modifier = Modifier) {
+        Row(modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { app.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Back")) }
             OutlinedTextField(
                 text, { text = it },
@@ -95,6 +100,13 @@ fun SearchScreen(app: AppState, initial: String) {
             )
             IconButton(onClick = { submit(text) }) { Icon(Icons.Outlined.Search, tr("Search")) }
         }
+    }
+
+    val bottom = prefs.searchAtBottom && LocalCompact.current
+    Column(Modifier.fillMaxSize()) {
+        if (!bottom) SearchBox()
+        // the suggestions or the results; with the box at the bottom it sits under them
+        Column(Modifier.weight(1f).fillMaxWidth()) {
         if (suggestions.isNotEmpty()) {
             LazyColumn(Modifier.fillMaxSize()) {
                 items(suggestions) { s ->
@@ -108,7 +120,7 @@ fun SearchScreen(app: AppState, initial: String) {
         }
         if (query.isEmpty()) return@Column
         val compact = LocalCompact.current
-        val grid = app.store.settings.value.searchGrid
+        val grid = prefs.searchGrid
         Row(verticalAlignment = Alignment.CenterVertically) {
             LazyRow(Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(listOf(YouTube.Filter.ALL to "All", YouTube.Filter.VIDEOS to "Videos", YouTube.Filter.CHANNELS to "Channels", YouTube.Filter.PLAYLISTS to "Playlists")) { (f, label) ->
@@ -131,5 +143,7 @@ fun SearchScreen(app: AppState, initial: String) {
                 loading = pager.loading, onEnd = { pager.loadMore() }, rows = !compact && !grid,
             )
         }
+        }
+        if (bottom) SearchBox(Modifier.imePadding())
     }
 }

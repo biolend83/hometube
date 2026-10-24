@@ -76,6 +76,11 @@ class AppState(val platform: Platform, val store: Store) {
         }
     }
 
+    /** full screen on a wide screen: the comments beside the video */
+    var fsComments by mutableStateOf(false)
+    /** Home shows things outside what you usually watch */
+    var discover by mutableStateOf(false)
+
     /** a newer version to offer, found by [checkForUpdates] */
     var update by mutableStateOf<Remote.Release?>(null)
 
