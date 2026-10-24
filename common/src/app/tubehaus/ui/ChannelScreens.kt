@@ -37,7 +37,7 @@ fun ChannelScreen(app: AppState, id: String, name: String) {
     val calm = app.store.settings.value.calm
     val tabs = listOfNotNull(
         YouTube.Tab.VIDEOS to "Videos",
-        if (calm) null else YouTube.Tab.SHORTS to "Shorts",
+        if (app.noShorts) null else YouTube.Tab.SHORTS to "Shorts",
         YouTube.Tab.LIVE to "Live",
         YouTube.Tab.PLAYLISTS to "Playlists",
     )

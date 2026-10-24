@@ -53,6 +53,9 @@ class AppState(val platform: Platform, val store: Store) {
     /** the Shorts screen's keys while it is open (up and down change the Short) */
     var shortsKeys: ((androidx.compose.ui.input.key.Key) -> Boolean)? = null
 
+    /** Shorts are hidden everywhere: by their own switch or by calm mode */
+    val noShorts: Boolean get() = store.settings.value.let { it.calm || it.hideShorts }
+
     fun go(s: Screen) {
         if (s in TABS) {
             stack.clear(); stack.add(s)

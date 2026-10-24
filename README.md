@@ -1,6 +1,6 @@
 <div align="center">
 
-# TubeHaus for Android and Windows
+# TubeHaus for Android, Windows and Linux
 
 **YouTube on your own terms — and everything runs on your device.**
 
@@ -8,7 +8,7 @@ No server, no account, no Google sign-in, no tracking. The app talks to YouTube 
 keeps your subscriptions, history and playlists on the device, and works out recommendations
 there too.
 
-**[⬇ Android APK (0.2.1, beta)](https://github.com/biolend83/tubehaus/releases/download/app-v0.2.1/TubeHaus-0.2.1.apk)** · **[⬇ Windows installer (0.2.1, beta)](https://github.com/biolend83/tubehaus/releases/download/win-v0.2.1/TubeHaus-0.2.1.msi)** · [All app releases](https://github.com/biolend83/tubehaus/releases) · [TubeHaus web app (main branch)](https://github.com/biolend83/tubehaus)
+**[⬇ Android APK](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.0/TubeHaus-0.3.0.apk)** · **[⬇ Windows](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.0/TubeHaus-0.3.0.msi)** · **[⬇ Linux .deb](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.0/TubeHaus-0.3.0-linux-amd64.deb)** (0.3.0, beta) · [All app releases](https://github.com/biolend83/tubehaus/releases) · [TubeHaus web app (main branch)](https://github.com/biolend83/tubehaus)
 
 </div>
 
@@ -27,6 +27,8 @@ there too.
   - Windows: mpv with GPU decoding, the same controls as on the phone plus a volume bar,
     keyboard shortcuts (space/K, arrows, J/L, F, M) and the mouse wheel for Shorts.
 - **Calm mode** — no view counts, no Shorts, nothing starts by itself.
+- **Focus switches** — hide thumbnails, comments, Shorts or related videos, and turn off the home
+  feed or the subscription feed, each on its own (Settings → Focus).
 - **Your data moves freely** — export a TubeHaus backup (also readable by the TubeHaus web app),
   Invidious, CSV or OPML.
 
@@ -43,13 +45,16 @@ ExoPlayer (Media3) on Android, libmpv on Windows.
 
 ## Install
 
-- **Android 8.0+** — [the APK](https://github.com/biolend83/tubehaus/releases/download/app-v0.2.1/TubeHaus-0.2.1.apk)
+- **Android 8.0+** — [the APK](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.0/TubeHaus-0.3.0.apk)
   (beta). Open it on the phone and allow installing from your browser when asked.
   Updates: [Obtainium](https://obtainium.imranr.dev) with `https://github.com/biolend83/tubehaus`
   (tick "include pre-releases", filter tags by `app-v`).
-- **Windows 10/11 (64-bit)** — [the installer](https://github.com/biolend83/tubehaus/releases/download/win-v0.2.1/TubeHaus-0.2.1.msi)
+- **Windows 10/11 (64-bit)** — [the installer](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.0/TubeHaus-0.3.0.msi)
   (beta, mpv built in). Windows may warn that the publisher is unknown, because the installer
   isn't code-signed: choose *More info* → *Run anyway*.
+- **Linux (x86-64)** — [.deb](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.0/TubeHaus-0.3.0-linux-amd64.deb) for Debian/Ubuntu, or [a tar.gz](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.0/TubeHaus-0.3.0-linux-x64.tar.gz) to unpack
+  anywhere and run `bin/tubehaus`. It uses your system's mpv: `sudo apt install libmpv2`
+  (Fedora and Arch: the `mpv` package). New and not yet tested much: reports welcome.
 
 There is no iOS version: apps outside the App Store can't be installed on an iPhone without
 re-signing them every week. On iPhone and iPad, use the TubeHaus web app.

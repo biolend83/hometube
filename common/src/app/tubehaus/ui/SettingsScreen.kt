@@ -35,7 +35,7 @@ import app.tubehaus.data.Transfer
 import app.tubehaus.rec.Learn
 import kotlin.math.abs
 
-const val VERSION = "0.2.1"
+const val VERSION = "0.3.0"
 
 @Composable
 fun SettingsScreen(app: AppState) {
@@ -56,6 +56,15 @@ fun SettingsScreen(app: AppState) {
                     listOf("0" to tr("Follow the system"), "1" to tr("Light"), "2" to tr("Dark"))) { c -> set { it.copy(dark = c.toInt()) } }
             }
             item { Toggle(tr("Calm mode"), tr("No view counts, no Shorts, nothing plays by itself"), s.calm) { b -> set { it.copy(calm = b) } } }
+
+            // one switch for each part of YouTube that pulls you in
+            item { Group(tr("Focus")) }
+            item { Toggle(tr("Hide thumbnails"), tr("Titles only, no pictures to click on"), s.hideThumbs) { b -> set { it.copy(hideThumbs = b) } } }
+            item { Toggle(tr("Hide comments"), tr("No comments under videos"), s.hideComments) { b -> set { it.copy(hideComments = b) } } }
+            item { Toggle(tr("Turn off the home feed"), tr("Home becomes a search page"), s.homeOff) { b -> set { it.copy(homeOff = b) } } }
+            item { Toggle(tr("Turn off the subscription feed"), tr("Subscriptions shows your channels, not their new videos"), s.subsFeedOff) { b -> set { it.copy(subsFeedOff = b) } } }
+            item { Toggle(tr("Hide Shorts"), tr("No Shorts tab, no Shorts in lists"), s.hideShorts || s.calm) { b -> set { it.copy(hideShorts = b) } } }
+            item { Toggle(tr("Hide related videos"), tr("Nothing suggested next to or under a video"), s.hideRelated) { b -> set { it.copy(hideRelated = b) } } }
 
             item { Group(tr("Playback")) }
             item { Choice(tr("Quality"), hLabel(s.maxHeight), heights.map { "$it" to hLabel(it) }) { c -> set { it.copy(maxHeight = c.toInt()) } } }

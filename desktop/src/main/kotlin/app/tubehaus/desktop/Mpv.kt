@@ -55,11 +55,18 @@ interface LibMpv : Library {
         const val RENDER_PARAM_SW_POINTER = 20
         const val RENDER_UPDATE_FRAME = 1L
 
-        fun load(): LibMpv? = try {
-            Native.load("mpv-2", LibMpv::class.java, mapOf(Library.OPTION_STRING_ENCODING to "UTF-8"))
-        } catch (e: UnsatisfiedLinkError) {
-            try { Native.load("mpv", LibMpv::class.java, mapOf(Library.OPTION_STRING_ENCODING to "UTF-8")) } catch (e2: UnsatisfiedLinkError) { null }
+        /** libmpv-2.dll next to the app on Windows; the system's libmpv (libmpv.so.2) on Linux */
+        fun load(): LibMpv? {
+            for (name in listOf("mpv-2", "mpv", "libmpv.so.2", "libmpv.so.1")) {
+                try {
+                    return Native.load(name, LibMpv::class.java, mapOf(Library.OPTION_STRING_ENCODING to "UTF-8"))
+                } catch (_: UnsatisfiedLinkError) {}
+            }
+            return null
         }
+
+        val MISSING = if (System.getProperty("os.name").startsWith("Windows")) "mpv is missing: put libmpv-2.dll next to TubeHaus"
+            else "mpv is missing: install libmpv (Debian/Ubuntu: sudo apt install libmpv2, Fedora/Arch: the mpv package)"
 
         /** a mpv_render_param array ({int type; void *data} each, ended by INVALID); the caller keeps the data alive */
         fun params(vararg p: Pair<Int, Pointer?>): Memory {

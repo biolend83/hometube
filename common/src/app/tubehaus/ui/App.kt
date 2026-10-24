@@ -103,10 +103,9 @@ private data class Tab(val screen: Screen, val label: String, val on: ImageVecto
 
 @Composable
 private fun tabs(app: AppState): List<Tab> {
-    val calm = app.store.settings.value.calm
     return listOfNotNull(
         Tab(Screen.Home, tr("Home"), Icons.Filled.Home, Icons.Outlined.Home),
-        if (calm) null else Tab(Screen.Shorts, tr("Shorts"), Icons.Filled.Bolt, Icons.Outlined.Bolt),
+        if (app.noShorts) null else Tab(Screen.Shorts, tr("Shorts"), Icons.Filled.Bolt, Icons.Outlined.Bolt),
         Tab(Screen.Subs, tr("Subscriptions"), Icons.Filled.Subscriptions, Icons.Outlined.Subscriptions),
         Tab(Screen.Library, tr("Library"), Icons.Filled.VideoLibrary, Icons.Outlined.VideoLibrary),
     )
@@ -220,7 +219,8 @@ private fun MiniPlayer(app: AppState) {
             Modifier.fillMaxWidth().clickable { app.go(Screen.Watch(v.id)) }.padding(end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Img(v.thumb, Modifier.width(96.dp).aspectRatio(16f / 9f))
+            if (!app.store.settings.value.hideThumbs) Img(v.thumb, Modifier.width(96.dp).aspectRatio(16f / 9f))
+            else Spacer(Modifier.width(4.dp))
             Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
                 Text(v.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(v.author, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)

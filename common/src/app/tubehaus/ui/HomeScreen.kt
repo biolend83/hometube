@@ -44,6 +44,13 @@ private object HomeCache {
 
 @Composable
 fun HomeScreen(app: AppState) {
+    if (app.store.settings.value.homeOff) {
+        FeedOff(tr("The home feed is off"), tr("Search for what you came for, or open your subscriptions.")) {
+            Button(onClick = { app.go(Screen.Search()) }) { Text(tr("Search")) }
+            TextButton(onClick = { app.go(Screen.Subs) }) { Text(tr("Subscriptions")) }
+        }
+        return
+    }
     var askTopics by remember { mutableStateOf(app.rec.needsTopics()) }
     if (askTopics) {
         TopicPicker(app) { askTopics = false }
@@ -81,6 +88,19 @@ fun HomeScreen(app: AppState) {
                 }
             },
         )
+    }
+}
+
+/** What a page shows when its feed is switched off in Settings → Focus. */
+@Composable
+fun FeedOff(title: String, sub: String, actions: @Composable () -> Unit) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(Modifier.widthIn(max = 420.dp).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+            Text(sub, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp, bottom = 20.dp))
+            actions()
+        }
     }
 }
 
