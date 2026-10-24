@@ -10,9 +10,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asComposeImageBitmap
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import app.tubehaus.engine.Caption
@@ -32,9 +31,15 @@ import kotlinx.coroutines.flow.update
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.ColorType
+import org.jetbrains.skia.FilterMipmap
+import org.jetbrains.skia.FilterMode
+import org.jetbrains.skia.Image
 import org.jetbrains.skia.ImageInfo
+import org.jetbrains.skia.MipmapMode
+import org.jetbrains.skia.Rect
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import javax.swing.SwingUtilities
 import kotlin.concurrent.thread
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -68,13 +73,12 @@ class MpvPlayer : VideoPlayer {
     val available get() = lib != null
 
     // ------------------------------------------------------------------ the picture
-    /** one frame buffer; three of them rotate so the one on screen is never the one being drawn */
-    private class Frame(val w: Int, val h: Int) {
+    /** where mpv draws, at the current size */
+    private class Target(val w: Int, val h: Int) {
         val bitmap = Bitmap().apply {
             allocPixels(ImageInfo(w, h, ColorType.RGB_888X, ColorAlphaType.OPAQUE), (w * 4 + 63) / 64 * 64)
         }
         val addr = Pointer(bitmap.peekPixels()!!.addr)
-        val image: ImageBitmap = bitmap.asComposeImageBitmap()
     }
 
     private var render: Pointer? = null
@@ -87,9 +91,14 @@ class MpvPlayer : VideoPlayer {
     private val pixelFormat = LibMpv.cString("rgb0")
     private val swSize = Memory(8)
     private val stride = Memory(8)
-    private val ring = arrayOfNulls<Frame>(3)
-    private var next = 0
-    @Volatile private var front: Frame? = null
+    private var target: Target? = null
+    /**
+     * The frame on screen: a copy made once per frame and freed by hand when the next one
+     * replaces it. (Drawing the bitmap itself made Skia copy it on every repaint into native
+     * memory the garbage collector barely sees, and after a few minutes the app ran out of it.)
+     */
+    @Volatile private var front: Image? = null
+    private val sampling = FilterMipmap(FilterMode.LINEAR, MipmapMode.NONE)
     /** bumped for every new frame: the Canvas reads it, so Compose repaints (only repaints) */
     private val frames = mutableIntStateOf(0)
     @Volatile private var view = IntSize.Zero
@@ -140,20 +149,18 @@ class MpvPlayer : VideoPlayer {
                 if (views == 0) return@synchronized
                 val (w, h) = target() ?: return@synchronized
                 redraw = false
-                val f = ring[next]?.takeIf { it.w == w && it.h == h } ?: Frame(w, h).also { ring[next] = it }
-                next = (next + 1) % ring.size
+                val t = target?.takeIf { it.w == w && it.h == h } ?: Target(w, h).also { target = it }
                 swSize.setInt(0, w); swSize.setInt(4, h)
-                stride.setLong(0, f.bitmap.rowBytes.toLong())
+                stride.setLong(0, t.bitmap.rowBytes.toLong())
                 val p = LibMpv.params(
                     LibMpv.RENDER_PARAM_SW_SIZE to swSize,
                     LibMpv.RENDER_PARAM_SW_FORMAT to pixelFormat,
                     LibMpv.RENDER_PARAM_SW_STRIDE to stride,
-                    LibMpv.RENDER_PARAM_SW_POINTER to f.addr,
+                    LibMpv.RENDER_PARAM_SW_POINTER to t.addr,
                 )
                 if (l.mpv_render_context_render(ctx, p) >= 0) {
-                    f.bitmap.notifyPixelsChanged()
-                    front = f
-                    frames.intValue++
+                    t.bitmap.notifyPixelsChanged()
+                    show(Image.makeFromBitmap(t.bitmap))      // a copy: mpv can draw the next one meanwhile
                 }
             }
         }
@@ -170,10 +177,15 @@ class MpvPlayer : VideoPlayer {
         return (v.width * s).roundToInt().coerceAtLeast(2) to (v.height * s).roundToInt().coerceAtLeast(2)
     }
 
-    private fun clearPicture() {
-        front = null
+    /** puts [img] on screen; the old frame is freed on the UI thread, after any repaint still using it */
+    private fun show(img: Image?) {
+        val old = front
+        front = img
         frames.intValue++
+        if (old != null) SwingUtilities.invokeLater { old.close() }
     }
+
+    private fun clearPicture() = show(null)
 
     // ------------------------------------------------------------------ mpv's side
     private fun cmd(vararg a: String) {
@@ -271,8 +283,9 @@ class MpvPlayer : VideoPlayer {
         } else {
             val cap = if (pinned > 0) pinned else opts.maxHeight
             val v = pickVideo(s, cap) ?: return
-            url = v.url
-            pickAudio(s)?.let { a -> cmd("change-list", "audio-files", "append", a.url) }
+            // through the local proxy, which fetches in 10 MB pieces (YouTube crawls on one long request)
+            url = LocalProxy.wrap(v.url)
+            pickAudio(s)?.let { a -> cmd("change-list", "audio-files", "append", LocalProxy.wrap(a.url)) }
         }
         set("start", if (startMs > 0) "+%.1f".format(java.util.Locale.ROOT, startMs / 1000.0) else "none")
         set("loop-file", if (opts.loop) "inf" else "no")
@@ -372,13 +385,12 @@ class MpvPlayer : VideoPlayer {
         // transparent until the first frame, so a thumbnail underneath shows through
         Canvas(modifier.onSizeChanged { view = it; redraw = true; wake.release() }) {
             frames.intValue          // repaint on every new frame
-            val f = front ?: return@Canvas
-            drawImage(
-                f.image,
-                srcSize = IntSize(f.w, f.h),
-                dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
-                filterQuality = FilterQuality.Low,
-            )
+            val img = front ?: return@Canvas
+            drawIntoCanvas { c ->
+                c.nativeCanvas.drawImageRect(
+                    img, Rect.makeWH(img.width.toFloat(), img.height.toFloat()), Rect.makeWH(size.width, size.height), sampling, null, true,
+                )
+            }
         }
     }
 

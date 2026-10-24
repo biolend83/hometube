@@ -1,6 +1,7 @@
 package app.tubehaus.desktop
 
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
@@ -19,6 +20,8 @@ import app.tubehaus.ui.Screen
 import app.tubehaus.ui.playerKey
 import java.awt.Desktop
 import java.awt.FileDialog
+import java.awt.Point
+import java.awt.image.BufferedImage
 import java.awt.Frame
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
@@ -57,8 +60,16 @@ class DesktopPlatform : Platform {
     }
 
     override fun setFullscreen(on: Boolean) {
+        // the title bar and borders come off and the window covers the monitor; Java's own full screen keeps the title bar
+        val f = frame
+        if (f != null && WinFrame.fullscreen(f, on)) return
         window?.placement = if (on) WindowPlacement.Fullscreen else WindowPlacement.Floating
     }
+
+    // an invisible pointer while the video plays with its controls hidden
+    override val blankPointer = PointerIcon(
+        Toolkit.getDefaultToolkit().createCustomCursor(BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB), Point(0, 0), "none"),
+    )
 }
 
 fun main() {
@@ -94,7 +105,10 @@ fun main() {
                 }
             },
         ) {
-            platform.frame = window
+            if (platform.frame !== window) {
+                platform.frame = window
+                WinFrame.darkTitleBar(window)
+            }
             App(state)
         }
     }

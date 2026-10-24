@@ -25,6 +25,8 @@ interface Platform {
     /** lets the user pick a file; calls [done] with its text (null when cancelled) */
     fun openTextFile(done: (String?) -> Unit)
     fun setFullscreen(on: Boolean)
+    /** a mouse pointer that shows nothing, hidden while a video plays (none on touch screens) */
+    val blankPointer: androidx.compose.ui.input.pointer.PointerIcon? get() = null
     /** true on a metered connection (mobile data): the lower quality cap applies */
     fun metered(): Boolean = false
     /** the device language, e.g. "ko" */

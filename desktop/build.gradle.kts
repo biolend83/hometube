@@ -48,7 +48,7 @@ compose.desktop {
             copyright = "GPL-3.0"
             // libmpv-2.dll goes in resources/windows (not in git: see README)
             appResourcesRootDir.set(project.layout.projectDirectory.dir("resources"))
-            modules("java.net.http", "jdk.unsupported")
+            modules("java.net.http", "jdk.unsupported", "jdk.httpserver")
             windows {
                 menuGroup = "TubeHaus"
                 shortcut = true
