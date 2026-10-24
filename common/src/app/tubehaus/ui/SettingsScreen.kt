@@ -35,7 +35,7 @@ import app.tubehaus.data.Transfer
 import app.tubehaus.rec.Learn
 import kotlin.math.abs
 
-const val VERSION = "0.3.8"
+const val VERSION = "0.3.9"
 
 @Composable
 fun SettingsScreen(app: AppState) {
@@ -52,8 +52,8 @@ fun SettingsScreen(app: AppState) {
                 SItem(tr("Region"), s.region.ifEmpty { app.platform.deviceRegion() + " (" + tr("from this device") + ")" }) { dialog = "region" }
             }
             item {
-                Choice(tr("Theme"), listOf(tr("Follow the system"), tr("Light"), tr("Dark"))[s.dark],
-                    listOf("0" to tr("Follow the system"), "1" to tr("Light"), "2" to tr("Dark"))) { c -> set { it.copy(dark = c.toInt()) } }
+                val themes = listOf("0" to tr("Follow the system"), "1" to tr("Light"), "2" to tr("Dark"), "3" to tr("Black (AMOLED)"))
+                Choice(tr("Theme"), themes.getOrNull(s.dark)?.second ?: themes[0].second, themes) { c -> set { it.copy(dark = c.toInt()) } }
             }
             item {
                 val sizes = listOf(1f to tr("Normal"), 1.15f to tr("Large"), 1.3f to tr("Larger"), 1.5f to tr("Largest"))
@@ -61,10 +61,10 @@ fun SettingsScreen(app: AppState) {
                     sizes.map { "${it.first}" to it.second }) { c -> set { it.copy(textScale = c.toFloat()) } }
             }
             if (app.platform.touch) item {
-                Toggle(tr("Hide the tabs while scrolling"), tr("On phones, Home, Subscriptions and Library slide away as you scroll down"), s.autoHideNav) { b -> set { it.copy(autoHideNav = b) } }
+                Toggle(tr("Hide the tabs while scrolling"), tr("The tabs and the top bar slide away as you scroll down"), s.autoHideNav) { b -> set { it.copy(autoHideNav = b) } }
             }
             if (app.platform.touch) item {
-                Toggle(tr("Search box at the bottom"), tr("On phones, within reach of your thumb"), s.searchAtBottom) { b -> set { it.copy(searchAtBottom = b) } }
+                Toggle(tr("Search box at the bottom"), tr("Within reach of your thumb"), s.searchAtBottom) { b -> set { it.copy(searchAtBottom = b) } }
             }
             if (app.platform.name == "android") item {
                 Toggle(tr("Hide system bars"), tr("Hide the status and navigation bars everywhere. Swipe from the edge to see them."), s.hideBars) { b -> set { it.copy(hideBars = b) } }

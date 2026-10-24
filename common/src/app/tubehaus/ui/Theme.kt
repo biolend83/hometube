@@ -26,6 +26,14 @@ private val light = lightColorScheme(
     outline = Color(0xFFE5E5E5), error = Color(0xFFCC0000),
 )
 
+/** dark with pure black behind everything: the pixels of an AMOLED screen switch off */
+private val black by lazy {
+    dark.copy(
+        background = Color.Black, surface = Color.Black,
+        surfaceVariant = Color(0xFF1A1A1A), surfaceContainer = Color(0xFF121212), surfaceContainerHigh = Color(0xFF1E1E1E),
+    )
+}
+
 private val dark = darkColorScheme(
     primary = Color(0xFFF1F1F1), onPrimary = Color(0xFF0F0F0F),
     secondary = Color(0xFF3EA6FF), onSecondary = Color(0xFF0F0F0F),
@@ -47,6 +55,7 @@ private val type = Typography(
 
 @Composable
 fun TubeTheme(mode: Int, content: @Composable () -> Unit) {
-    val darkOn = when (mode) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }
-    MaterialTheme(colorScheme = if (darkOn) dark else light, typography = type, content = content)
+    // 0 follow the system, 1 light, 2 dark, 3 black (pure black for AMOLED screens)
+    val darkOn = when (mode) { 1 -> false; 2, 3 -> true; else -> isSystemInDarkTheme() }
+    MaterialTheme(colorScheme = if (mode == 3) black else if (darkOn) dark else light, typography = type, content = content)
 }
