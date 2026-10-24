@@ -8,7 +8,7 @@ No server, no account, no Google sign-in, no tracking. The app talks to YouTube 
 keeps your subscriptions, history and playlists on the device, and works out recommendations
 there too.
 
-**[⬇ Android APK (0.1.2, beta)](https://github.com/biolend83/tubehaus/releases/download/app-v0.1.2/TubeHaus-0.1.2.apk)** · **[⬇ Windows installer (0.2.0, beta)](https://github.com/biolend83/tubehaus/releases/download/win-v0.2.0/TubeHaus-0.2.0.msi)** · [All app releases](https://github.com/biolend83/tubehaus/releases) · [TubeHaus web app (main branch)](https://github.com/biolend83/tubehaus)
+**[⬇ Android APK (0.2.1, beta)](https://github.com/biolend83/tubehaus/releases/download/app-v0.2.1/TubeHaus-0.2.1.apk)** · **[⬇ Windows installer (0.2.1, beta)](https://github.com/biolend83/tubehaus/releases/download/win-v0.2.1/TubeHaus-0.2.1.msi)** · [All app releases](https://github.com/biolend83/tubehaus/releases) · [TubeHaus web app (main branch)](https://github.com/biolend83/tubehaus)
 
 </div>
 
@@ -43,11 +43,11 @@ ExoPlayer (Media3) on Android, libmpv on Windows.
 
 ## Install
 
-- **Android 8.0+** — [the APK](https://github.com/biolend83/tubehaus/releases/download/app-v0.1.2/TubeHaus-0.1.2.apk)
+- **Android 8.0+** — [the APK](https://github.com/biolend83/tubehaus/releases/download/app-v0.2.1/TubeHaus-0.2.1.apk)
   (beta). Open it on the phone and allow installing from your browser when asked.
   Updates: [Obtainium](https://obtainium.imranr.dev) with `https://github.com/biolend83/tubehaus`
   (tick "include pre-releases", filter tags by `app-v`).
-- **Windows 10/11 (64-bit)** — [the installer](https://github.com/biolend83/tubehaus/releases/download/win-v0.2.0/TubeHaus-0.2.0.msi)
+- **Windows 10/11 (64-bit)** — [the installer](https://github.com/biolend83/tubehaus/releases/download/win-v0.2.1/TubeHaus-0.2.1.msi)
   (beta, mpv built in). Windows may warn that the publisher is unknown, because the installer
   isn't code-signed: choose *More info* → *Run anyway*.
 

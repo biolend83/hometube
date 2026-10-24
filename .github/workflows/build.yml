@@ -66,7 +66,8 @@ jobs:
           path: desktop/build/compose/binaries/main-release/msi/*.msi
 
   release:
-    if: startsWith(github.ref, 'refs/tags/app-v') || startsWith(github.ref, 'refs/tags/win-v')
+    # Windows releases only: Android releases (app-v*) are published by hand with the locally signed APK
+    if: startsWith(github.ref, 'refs/tags/win-v')
     needs: [android, windows]
     runs-on: ubuntu-latest
     permissions:
