@@ -95,10 +95,38 @@ jobs:
             TubeHaus-*.rpm
             TubeHaus-*.tar.gz
 
+  mac:
+    # Apple Silicon; mpv comes from Homebrew on the user's Mac (brew install mpv), nothing is bundled
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build .dmg
+        run: |
+          # the app icon as .icns, made from the PNG
+          mkdir -p icon.iconset
+          for s in 16 32 128 256 512; do
+            sips -z $s $s desktop/src/main/resources/icon.png --out icon.iconset/icon_${s}x${s}.png >/dev/null
+            sips -z $((s*2)) $((s*2)) desktop/src/main/resources/icon.png --out icon.iconset/icon_${s}x${s}@2x.png >/dev/null
+          done
+          iconutil -c icns icon.iconset -o desktop/icon.icns
+          ./gradlew --no-daemon :desktop:packageReleaseDmg
+          ver=$(sed -n 's/^app.version=//p' gradle.properties)
+          cp "$(find desktop/build/compose/binaries/main-release/dmg -name '*.dmg' | head -1)" "TubeHaus-$ver-mac-arm64.dmg"
+          ls -la TubeHaus-*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          path: TubeHaus-*.dmg
+
   release:
     # desktop releases only: Android releases (app-v*) are published by hand with the locally signed APK
     if: startsWith(github.ref, 'refs/tags/desktop-v') || startsWith(github.ref, 'refs/tags/win-v')
-    needs: [android, windows, linux]
+    needs: [android, windows, linux, mac]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -111,11 +139,11 @@ jobs:
         # not update the ones already installed, so the APK is always uploaded by hand
         run: |
           files="windows/*.msi"
-          case "$GITHUB_REF_NAME" in desktop-v*) files="$files linux/*.deb linux/*.rpm linux/*.tar.gz";; esac
+          case "$GITHUB_REF_NAME" in desktop-v*) files="$files linux/*.deb linux/*.rpm linux/*.tar.gz mac/*.dmg";; esac
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" $files --repo "$GITHUB_REPOSITORY" --clobber
           else
             # a pre-release, so it never becomes the server's "latest release"
             gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "TubeHaus desktop ${GITHUB_REF_NAME#*-v}" \
-              --prerelease --latest=false --notes "Windows and Linux" $files
+              --prerelease --latest=false --notes "Windows, macOS and Linux" $files
           fi

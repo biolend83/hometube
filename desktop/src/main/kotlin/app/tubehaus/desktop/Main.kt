@@ -28,10 +28,14 @@ import java.awt.datatransfer.StringSelection
 import java.io.File
 import java.net.URI
 
+private val home = System.getProperty("user.home")
+val isMac = System.getProperty("os.name").startsWith("Mac")
+
 class DesktopPlatform : Platform {
     override val name = "desktop"
-    override val dataDir: File = File(System.getenv("APPDATA") ?: (System.getProperty("user.home") + "/.config"), "TubeHaus")
-    override val cacheDir: File = File(System.getenv("LOCALAPPDATA") ?: (System.getProperty("user.home") + "/.cache"), "TubeHaus")
+    // Windows: %APPDATA%; macOS: ~/Library/Application Support (and Caches); Linux: ~/.config, ~/.cache
+    override val dataDir: File = File(System.getenv("APPDATA") ?: if (isMac) "$home/Library/Application Support" else "$home/.config", "TubeHaus")
+    override val cacheDir: File = File(System.getenv("LOCALAPPDATA") ?: if (isMac) "$home/Library/Caches" else "$home/.cache", "TubeHaus")
     override val touch = false
     val mpv = MpvPlayer()
     override val player get() = mpv
@@ -73,9 +77,10 @@ class DesktopPlatform : Platform {
 }
 
 fun main() {
-    // libmpv-2.dll: next to the installed app, or in desktop/resources/windows when run from Gradle
-    System.getProperty("compose.application.resources.dir")?.let { System.setProperty("jna.library.path", it) }
-        ?: System.setProperty("jna.library.path", File("resources/windows").absolutePath)
+    // libmpv-2.dll: next to the installed app, or in desktop/resources/windows when run from Gradle;
+    // on macOS Homebrew's mpv (Apple Silicon /opt/homebrew, Intel /usr/local), which isn't on the default search path
+    val bundled = System.getProperty("compose.application.resources.dir") ?: File("resources/windows").absolutePath
+    System.setProperty("jna.library.path", if (isMac) "$bundled:/opt/homebrew/lib:/usr/local/lib" else bundled)
     val platform = DesktopPlatform()
     val state = AppState(platform, Store(platform.dataDir))
     application {

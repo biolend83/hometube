@@ -55,7 +55,9 @@ class AppState(val platform: Platform, val store: Store) {
         scope.launch {
             store.settings.update { it.copy(checkedAt = System.currentTimeMillis()) }
             Remote.refreshClients()
-            val desktopFile = if (System.getProperty("os.name").startsWith("Windows")) ".msi" else null   // Linux: the page, pick deb/rpm/tar.gz
+            val os = System.getProperty("os.name")
+            // Linux: the release page, to pick deb/rpm/tar.gz
+            val desktopFile = when { os.startsWith("Windows") -> ".msi"; os.startsWith("Mac") -> ".dmg"; else -> null }
             val r = if (platform.name == "android") Remote.newerRelease("app-v", VERSION, ".apk")
                 else Remote.newerRelease("desktop-v", VERSION, desktopFile)
             if (r != null && (now || r.version != store.settings.value.skipVersion)) update = r

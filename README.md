@@ -1,6 +1,6 @@
 <div align="center">
 
-# TubeHaus for Windows and Linux
+# TubeHaus for Windows, macOS and Linux
 
 **YouTube on your own terms — and everything runs on your PC.**
 
@@ -8,7 +8,7 @@ No server, no account, no Google sign-in, no tracking. The app talks to YouTube 
 keeps your subscriptions, history and playlists on the device, and works out recommendations
 there too.
 
-**[⬇ Windows 10/11](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.2/TubeHaus-0.3.2.msi)** · **[⬇ Linux .deb](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.2/TubeHaus-0.3.2-linux-amd64.deb)** (0.3.2, beta) · [Android app](https://github.com/biolend83/tubehaus/tree/android-app) · [All app releases](https://github.com/biolend83/tubehaus/releases) · [TubeHaus web app (main branch)](https://github.com/biolend83/tubehaus)
+**[⬇ Windows 10/11](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.3/TubeHaus-0.3.3.msi)** · **[⬇ macOS](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.3/TubeHaus-0.3.3-mac-arm64.dmg)** · **[⬇ Linux .deb](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.3/TubeHaus-0.3.3-linux-amd64.deb)** (0.3.2, beta) · [Android app](https://github.com/biolend83/tubehaus/tree/android-app) · [All app releases](https://github.com/biolend83/tubehaus/releases) · [TubeHaus web app (main branch)](https://github.com/biolend83/tubehaus)
 
 </div>
 
@@ -50,11 +50,14 @@ ExoPlayer (Media3) on Android, libmpv on Windows.
   (beta). Open it on the phone and allow installing from your browser when asked.
   Updates: [Obtainium](https://obtainium.imranr.dev) with `https://github.com/biolend83/tubehaus`
   (tick "include pre-releases", filter tags by `app-v`).
-- **Windows 10/11 (64-bit)** — [the installer](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.2/TubeHaus-0.3.2.msi)
+- **Windows 10/11 (64-bit)** — [the installer](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.3/TubeHaus-0.3.3.msi)
   (beta, mpv built in). Windows may warn that the publisher is unknown, because the installer
   isn't code-signed: choose *More info* → *Run anyway*.
-- **Linux (x86-64)** — [.deb](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.2/TubeHaus-0.3.2-linux-amd64.deb) for Debian/Ubuntu, [.rpm](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.2/TubeHaus-0.3.2-linux-x86_64.rpm)
-  for Fedora/openSUSE, or [a tar.gz](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.2/TubeHaus-0.3.2-linux-x64.tar.gz) to unpack anywhere and run `TubeHaus/bin/TubeHaus`.
+- **macOS (Apple Silicon)** — [the .dmg](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.3/TubeHaus-0.3.3-mac-arm64.dmg) (beta, new and barely tested).
+  It uses Homebrew's mpv: `brew install mpv`. The app isn't signed by Apple yet, so the first time
+  right-click it → *Open* → *Open*.
+- **Linux (x86-64)** — [.deb](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.3/TubeHaus-0.3.3-linux-amd64.deb) for Debian/Ubuntu, [.rpm](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.3/TubeHaus-0.3.3-linux-x86_64.rpm)
+  for Fedora/openSUSE, or [a tar.gz](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.3/TubeHaus-0.3.3-linux-x64.tar.gz) to unpack anywhere and run `TubeHaus/bin/TubeHaus`.
   It uses your system's mpv: `sudo apt install libmpv2` (Fedora: `sudo dnf install mpv-libs`, Arch: `mpv`). New and not yet tested much: reports welcome.
 
 There is no iOS version: apps outside the App Store can't be installed on an iPhone without

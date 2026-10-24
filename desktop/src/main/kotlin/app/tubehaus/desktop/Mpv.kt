@@ -55,9 +55,9 @@ interface LibMpv : Library {
         const val RENDER_PARAM_SW_POINTER = 20
         const val RENDER_UPDATE_FRAME = 1L
 
-        /** libmpv-2.dll next to the app on Windows; the system's libmpv (libmpv.so.2) on Linux */
+        /** libmpv-2.dll next to the app on Windows; the system's libmpv on Linux (libmpv.so.2) and macOS (Homebrew, libmpv.2.dylib) */
         fun load(): LibMpv? {
-            for (name in listOf("mpv-2", "mpv", "libmpv.so.2", "libmpv.so.1")) {
+            for (name in listOf("mpv-2", "mpv", "libmpv.so.2", "libmpv.so.1", "libmpv.2.dylib")) {
                 try {
                     return Native.load(name, LibMpv::class.java, mapOf(Library.OPTION_STRING_ENCODING to "UTF-8"))
                 } catch (_: UnsatisfiedLinkError) {}
@@ -65,8 +65,13 @@ interface LibMpv : Library {
             return null
         }
 
-        val MISSING = if (System.getProperty("os.name").startsWith("Windows")) "mpv is missing: put libmpv-2.dll next to TubeHaus"
-            else "mpv is missing: install libmpv (Debian/Ubuntu: sudo apt install libmpv2, Fedora/Arch: the mpv package)"
+        val MISSING = System.getProperty("os.name").let { os ->
+            when {
+                os.startsWith("Windows") -> "mpv is missing: put libmpv-2.dll next to TubeHaus"
+                os.startsWith("Mac") -> "mpv is missing: install it with Homebrew (brew install mpv), then open TubeHaus again"
+                else -> "mpv is missing: install libmpv (Debian/Ubuntu: sudo apt install libmpv2, Fedora: sudo dnf install mpv-libs, Arch: mpv)"
+            }
+        }
 
         /** a mpv_render_param array ({int type; void *data} each, ended by INVALID); the caller keeps the data alive */
         fun params(vararg p: Pair<Int, Pointer?>): Memory {

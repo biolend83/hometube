@@ -12,3 +12,6 @@ desktop/resources/windows/*.dll
 
 # JVM crash logs
 hs_err_pid*.log
+
+# made by CI on macOS from icon.png
+desktop/icon.icns
