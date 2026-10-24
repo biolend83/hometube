@@ -8,7 +8,7 @@ No server, no account, no Google sign-in, no tracking. The app talks to YouTube 
 keeps your subscriptions, history and playlists on the device, and works out recommendations
 there too.
 
-**[⬇ Download the Android APK (0.1.2, beta)](https://github.com/biolend83/tubehaus/releases/download/app-v0.1.2/TubeHaus-0.1.2.apk)** · [All app releases](https://github.com/biolend83/tubehaus/releases) · [TubeHaus web app (main branch)](https://github.com/biolend83/tubehaus)
+**[⬇ Android APK (0.1.2, beta)](https://github.com/biolend83/tubehaus/releases/download/app-v0.1.2/TubeHaus-0.1.2.apk)** · **[⬇ Windows installer (0.2.0, beta)](https://github.com/biolend83/tubehaus/releases/download/win-v0.2.0/TubeHaus-0.2.0.msi)** · [All app releases](https://github.com/biolend83/tubehaus/releases) · [TubeHaus web app (main branch)](https://github.com/biolend83/tubehaus)
 
 </div>
 
@@ -24,7 +24,8 @@ there too.
 - **A real player** — adaptive quality up to 4K/8K (AV1, VP9, H.264 picked by what your hardware
   decodes), captions with auto-translate, speed, resume where you stopped.
   - Android: background play with notification controls, picture-in-picture, opens YouTube links.
-  - Windows: mpv with GPU decoding and its own on-screen controls.
+  - Windows: mpv with GPU decoding, the same controls as on the phone plus a volume bar,
+    keyboard shortcuts (space/K, arrows, J/L, F, M) and the mouse wheel for Shorts.
 - **Calm mode** — no view counts, no Shorts, nothing starts by itself.
 - **Your data moves freely** — export a TubeHaus backup (also readable by the TubeHaus web app),
   Invidious, CSV or OPML.
@@ -46,7 +47,9 @@ ExoPlayer (Media3) on Android, libmpv on Windows.
   (beta). Open it on the phone and allow installing from your browser when asked.
   Updates: [Obtainium](https://obtainium.imranr.dev) with `https://github.com/biolend83/tubehaus`
   (tick "include pre-releases", filter tags by `app-v`).
-- **Windows 10/11** — coming: an installer (`.msi`) with mpv built in.
+- **Windows 10/11 (64-bit)** — [the installer](https://github.com/biolend83/tubehaus/releases/download/win-v0.2.0/TubeHaus-0.2.0.msi)
+  (beta, mpv built in). Windows may warn that the publisher is unknown, because the installer
+  isn't code-signed: choose *More info* → *Run anyway*.
 
 There is no iOS version: apps outside the App Store can't be installed on an iPhone without
 re-signing them every week. On iPhone and iPad, use the TubeHaus web app.
