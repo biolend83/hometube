@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -25,10 +26,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Forward10
@@ -46,6 +49,7 @@ import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -125,6 +129,7 @@ private fun Controls(app: AppState, fullscreen: Boolean) {
     var dragging by remember { mutableStateOf<Float?>(null) }
     var jump by remember { mutableStateOf<Pair<Int, Int>?>(null) }   // side (-1/1), seconds
     var settings by remember { mutableStateOf(false) }
+    var gesture by remember { mutableStateOf<Pair<String, Float>?>(null) }   // "brightness"/"volume", level
 
     LaunchedEffect(shown, poke, st.playing, dragging, settings) {
         if (shown && st.playing && dragging == null && !settings) {
@@ -181,8 +186,48 @@ private fun Controls(app: AppState, fullscreen: Boolean) {
                             }
                         },
                     )
+                }
+                // full screen on a phone: swipe up or down on the left for brightness, on the right for volume
+                .pointerInput(touch, fullscreen) {
+                    if (!touch || !fullscreen) return@pointerInput
+                    var kind = ""
+                    var level = -1f
+                    detectVerticalDragGestures(
+                        onDragStart = { o ->
+                            kind = if (o.x < size.width / 2) "brightness" else "volume"
+                            level = (if (kind == "brightness") app.platform.brightness() else app.platform.mediaVolume()) ?: -1f
+                        },
+                        onVerticalDrag = { change, dy ->
+                            if (level >= 0) {
+                                change.consume()
+                                level = (level - dy / (size.height * 0.8f)).coerceIn(0f, 1f)
+                                if (kind == "brightness") app.platform.setBrightness(level) else app.platform.setMediaVolume(level)
+                                gesture = kind to level
+                            }
+                        },
+                        onDragEnd = { gesture = null },
+                        onDragCancel = { gesture = null },
+                    )
                 },
         )
+        gesture?.let { (kind, level) ->
+            Row(
+                Modifier.align(Alignment.Center).background(Color(0x99000000), RoundedCornerShape(24.dp)).padding(horizontal = 18.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val icon = when {
+                    kind == "brightness" -> Icons.Filled.BrightnessMedium
+                    level == 0f -> Icons.AutoMirrored.Filled.VolumeOff
+                    else -> Icons.AutoMirrored.Filled.VolumeUp
+                }
+                Icon(icon, null, tint = Color.White)
+                LinearProgressIndicator(
+                    progress = { level }, color = Color.White, trackColor = Color(0x55FFFFFF),
+                    modifier = Modifier.padding(horizontal = 12.dp).width(120.dp),
+                )
+                Text("${(level * 100).toInt()}%", color = Color.White, fontSize = 13.sp)
+            }
+        }
         // the "10 seconds" bubble of a double-tap
         jump?.let { (side, secs) ->
             Box(

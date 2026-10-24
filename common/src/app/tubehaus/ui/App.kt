@@ -3,6 +3,7 @@ package app.tubehaus.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -46,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -68,6 +70,9 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import okio.Path.Companion.toOkioPath
 
+/** true on a phone-sized touch screen: the bottom bar, edge-to-edge cards; false on tablets and desktops */
+val LocalCompact = compositionLocalOf { true }
+
 @Composable
 fun App(app: AppState) {
     val settings by app.store.settings.state.collectAsState()
@@ -86,14 +91,19 @@ fun App(app: AppState) {
         TubeTheme(settings.dark) {
             CompositionLocalProvider(LocalPlatform provides app.platform) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    when {
-                        settings.lang.isEmpty() -> LanguagePicker(app)
-                        !settings.welcomed && app.store.lib.value.subs.isEmpty() -> Welcome(app)
-                        app.pip -> Box(Modifier.fillMaxSize().background(Color.Black)) {
-                            app.platform.player.View(Modifier.fillMaxSize())
+                    // phones get the phone layout; tablets and the desktop the wide one
+                    BoxWithConstraints(Modifier.fillMaxSize()) {
+                        CompositionLocalProvider(LocalCompact provides (app.platform.touch && maxWidth < 600.dp)) {
+                            when {
+                                settings.lang.isEmpty() -> LanguagePicker(app)
+                                !settings.welcomed && app.store.lib.value.subs.isEmpty() -> Welcome(app)
+                                app.pip -> Box(Modifier.fillMaxSize().background(Color.Black)) {
+                                    app.platform.player.View(Modifier.fillMaxSize())
+                                }
+                                app.fullscreen && app.current is Screen.Watch -> VideoArea(app, Modifier.fillMaxSize(), fullscreen = true)
+                                else -> Shell(app)
+                            }
                         }
-                        app.fullscreen && app.current is Screen.Watch -> VideoArea(app, Modifier.fillMaxSize(), fullscreen = true)
-                        else -> Shell(app)
                     }
                     LaunchedEffect(Unit) { app.checkForUpdates() }
                     app.update?.let { UpdateDialog(app, it) }
@@ -118,7 +128,7 @@ private fun tabs(app: AppState): List<Tab> {
 @Composable
 private fun Shell(app: AppState) {
     val cur = app.current
-    val touch = app.platform.touch
+    val compact = LocalCompact.current
     val root = app.stack.firstOrNull()
     val showTop = cur !is Screen.Watch && cur !is Screen.Shorts && cur !is Screen.Search
     LaunchedEffect(cur) {
@@ -130,7 +140,7 @@ private fun Shell(app: AppState) {
         bottomBar = {
             Column {
                 if (app.playback.video != null && cur !is Screen.Watch && cur !is Screen.Shorts) MiniPlayer(app)
-                if (touch && cur !is Screen.Watch) {
+                if (compact && cur !is Screen.Watch) {
                     NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 0.dp) {
                         for (t in tabs(app)) {
                             val sel = root == t.screen
@@ -147,7 +157,7 @@ private fun Shell(app: AppState) {
         snackbarHost = { SnackbarHost(app.snackbar) },
     ) { pad ->
         Row(Modifier.fillMaxSize().padding(pad)) {
-            if (!touch) {
+            if (!compact) {
                 NavigationRail(containerColor = MaterialTheme.colorScheme.background) {
                     for (t in tabs(app)) {
                         val sel = root == t.screen
@@ -204,7 +214,7 @@ private fun TopBar(app: AppState) {
             IconButton(onClick = { app.go(Screen.Search()) }) { Icon(Icons.Outlined.Search, tr("Search")) }
             IconButton(onClick = { app.go(Screen.Settings) }) { Icon(Icons.Outlined.Settings, tr("Settings")) }
         }
-        if (!app.platform.touch) HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+        if (!LocalCompact.current) HorizontalDivider(color = MaterialTheme.colorScheme.outline)
     }
 }
 

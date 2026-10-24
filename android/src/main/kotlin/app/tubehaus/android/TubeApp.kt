@@ -4,13 +4,17 @@ import android.app.Application
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.Uri
+import android.provider.Settings
+import android.view.WindowManager
 import app.tubehaus.data.Store
 import app.tubehaus.ui.AppState
 import app.tubehaus.ui.Platform
 import app.tubehaus.ui.VideoPlayer
 import java.io.File
+import kotlin.math.roundToInt
 
 class TubeApp : Application() {
     lateinit var platform: AndroidPlatform
@@ -59,6 +63,33 @@ class AndroidPlatform(private val app: Application) : Platform {
 
     override fun setFullscreen(on: Boolean) {
         activity?.setFullscreen(on)
+        // brightness set by the gesture lasts while in full screen; out of it the system's applies again
+        if (!on) activity?.window?.let { w -> w.attributes = w.attributes.apply { screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE } }
+    }
+
+    private val audio by lazy { app.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+
+    /** this window's brightness; until the gesture sets one it follows the system setting */
+    override fun brightness(): Float? {
+        val w = activity?.window ?: return null
+        val own = w.attributes.screenBrightness
+        if (own >= 0) return own
+        return runCatching { Settings.System.getInt(app.contentResolver, Settings.System.SCREEN_BRIGHTNESS) / 255f }.getOrDefault(0.5f)
+    }
+
+    override fun setBrightness(v: Float) {
+        val w = activity?.window ?: return
+        w.attributes = w.attributes.apply { screenBrightness = v.coerceIn(0.01f, 1f) }
+    }
+
+    override fun mediaVolume(): Float {
+        val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+        return audio.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / max
+    }
+
+    override fun setMediaVolume(v: Float) {
+        val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        audio.setStreamVolume(AudioManager.STREAM_MUSIC, (v.coerceIn(0f, 1f) * max).roundToInt(), 0)
     }
 
     override fun metered(): Boolean =
