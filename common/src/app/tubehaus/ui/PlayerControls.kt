@@ -66,6 +66,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -142,19 +143,22 @@ private fun Controls(app: AppState, fullscreen: Boolean) {
 
     fun toggle() { if (st.playing) player.pause() else player.play() }
 
+    val blank = app.platform.blankPointer
     // the mouse: on the outer box, so moving over the buttons counts too
     BoxWithConstraints(
-        Modifier.fillMaxSize().pointerInput(touch) {
-            if (touch) return@pointerInput
-            awaitPointerEventScope {
-                while (true) {
-                    when (awaitPointerEvent().type) {
-                        PointerEventType.Move, PointerEventType.Enter -> { shown = true; poke++ }
-                        PointerEventType.Exit -> if (st.playing && !settings) shown = false
+        Modifier.fillMaxSize()
+            .let { if (blank != null && !shown && st.playing) it.pointerHoverIcon(blank) else it }
+            .pointerInput(touch) {
+                if (touch) return@pointerInput
+                awaitPointerEventScope {
+                    while (true) {
+                        when (awaitPointerEvent().type) {
+                            PointerEventType.Move, PointerEventType.Enter -> { shown = true; poke++ }
+                            PointerEventType.Exit -> if (st.playing && !settings) shown = false
+                        }
                     }
                 }
-            }
-        },
+            },
     ) {
         val w = constraints.maxWidth.toFloat()
         // taps and clicks anywhere on the video

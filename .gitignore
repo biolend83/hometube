@@ -9,3 +9,6 @@ local.properties
 desktop/resources/windows/*.dll
 *.jks
 *.keystore
+
+# JVM crash logs
+hs_err_pid*.log
