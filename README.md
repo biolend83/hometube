@@ -53,7 +53,7 @@ ExoPlayer (Media3) on Android, libmpv on Windows.
   (beta, mpv built in). Windows may warn that the publisher is unknown, because the installer
   isn't code-signed: choose *More info* → *Run anyway*.
 - **Linux (x86-64)** — [.deb](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.0/TubeHaus-0.3.0-linux-amd64.deb) for Debian/Ubuntu, or [a tar.gz](https://github.com/biolend83/tubehaus/releases/download/desktop-v0.3.0/TubeHaus-0.3.0-linux-x64.tar.gz) to unpack
-  anywhere and run `bin/tubehaus`. It uses your system's mpv: `sudo apt install libmpv2`
+  anywhere and run `TubeHaus/bin/TubeHaus`. It uses your system's mpv: `sudo apt install libmpv2`
   (Fedora and Arch: the `mpv` package). New and not yet tested much: reports welcome.
 
 There is no iOS version: apps outside the App Store can't be installed on an iPhone without
