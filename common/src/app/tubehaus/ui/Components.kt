@@ -149,7 +149,7 @@ fun VideoMenu(v: Video, app: AppState, extra: List<Pair<String, () -> Unit>> = e
 fun VideoCard(v: Video, app: AppState, queue: List<Video> = emptyList()) {
     val calm = app.store.settings.value.calm
     Column(Modifier.fillMaxWidth().clickable { app.watch(v, queue) }.padding(bottom = 12.dp)) {
-        if (!app.store.settings.value.hideThumbs) Thumb(v, app, Modifier.fillMaxWidth(), rounded = if (app.platform.touch) 0 else 12)
+        if (!app.store.settings.value.hideThumbs) Thumb(v, app, Modifier.fillMaxWidth(), rounded = if (LocalCompact.current) 0 else 12)
         Row(Modifier.padding(start = 12.dp, top = 10.dp, end = 4.dp)) {
             if (v.channelId.isNotEmpty()) {
                 Avatar(v.avatar.ifEmpty { app.store.lib.value.subs[v.channelId]?.thumb ?: "" }, 36,
@@ -325,8 +325,8 @@ fun ItemGrid(
         columns = if (rows) GridCells.Adaptive(560.dp) else GridCells.Adaptive(320.dp),
         state = state,
         modifier = modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.spacedBy(if (app.platform.touch) 0.dp else 16.dp),
-        contentPadding = PaddingValues(horizontal = if (app.platform.touch) 0.dp else 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (LocalCompact.current) 0.dp else 16.dp),
+        contentPadding = PaddingValues(horizontal = if (LocalCompact.current) 0.dp else 16.dp, vertical = 8.dp),
     ) {
         if (header != null) item(span = { GridItemSpan(maxLineSpan) }) { header() }
         items(list, key = { it.id }, span = { if (it is Video && !rows) GridItemSpan(1) else GridItemSpan(maxLineSpan) }) {

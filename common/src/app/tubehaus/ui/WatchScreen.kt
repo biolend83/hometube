@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.WatchLater
@@ -37,6 +38,8 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -72,28 +75,54 @@ fun WatchScreen(app: AppState) {
         Empty(tr("Nothing is playing"))
         return
     }
+    val set = app.store.settings.value
+    val token = pb.details?.commentsToken?.takeIf { !set.hideComments }
+    val hasRelated = !set.hideRelated || pb.queue.isNotEmpty()
+    // the comments open beside (wide) or under (phone) the video, which keeps playing
+    var side by remember(v.id) { mutableStateOf(if (hasRelated) "next" else "comments") }
+    var commentsOpen by remember(v.id) { mutableStateOf(false) }
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val wide = maxWidth > 1000.dp
+        val wide = maxWidth > 840.dp
+        val sideWidth = minOf(420.dp, maxWidth * 0.4f)
         if (wide) {
-            // desktop: the video and its details on the left, what's next on the right
+            // tablets and the desktop: the video and its details on the left; up next or the comments on the right
             Row(Modifier.fillMaxSize()) {
                 LazyColumn(Modifier.weight(1f).padding(16.dp)) {
                     item { PlayerBox(app) }
                     item { Info(app, v) }
-                    comments(app)
                 }
-                // with related videos switched off only a queue keeps the column
-                if (!app.store.settings.value.hideRelated || pb.queue.isNotEmpty()) {
-                    LazyColumn(Modifier.width(420.dp).padding(top = 16.dp, end = 8.dp)) { related(app) }
+                if (hasRelated || token != null) {
+                    Column(Modifier.width(sideWidth).padding(top = 8.dp, end = 8.dp)) {
+                        if (hasRelated && token != null) {
+                            Row(Modifier.padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(side == "next", onClick = { side = "next" }, label = { Text(tr("Up next")) })
+                                FilterChip(side == "comments", onClick = { side = "comments" }, label = { Text(tr("Comments")) })
+                            }
+                        }
+                        LazyColumn(Modifier.fillMaxSize()) {
+                            if (token != null && (side == "comments" || !hasRelated)) item { CommentList(app, token) }
+                            else related(app)
+                        }
+                    }
                 }
             }
         } else {
             Column(Modifier.fillMaxSize()) {
                 PlayerBox(app)
-                LazyColumn(Modifier.fillMaxSize()) {
-                    item { Info(app, v) }
-                    item { CommentsTeaser(app) }
-                    related(app)
+                if (commentsOpen && token != null) {
+                    // the comments take the space under the video; the video keeps playing above
+                    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(tr("Comments"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { commentsOpen = false }) { Icon(Icons.Filled.Close, tr("Close")) }
+                    }
+                    HorizontalDivider()
+                    LazyColumn(Modifier.fillMaxSize()) { item { CommentList(app, token) } }
+                } else {
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        item { Info(app, v) }
+                        if (token != null) item { CommentsTeaser { commentsOpen = true } }
+                        related(app)
+                    }
                 }
             }
         }
@@ -231,30 +260,12 @@ private fun LazyListScope.related(app: AppState) {
 }
 
 @Composable
-private fun CommentsTeaser(app: AppState) {
-    var open by remember { mutableStateOf(false) }
-    if (app.store.settings.value.hideComments) return
-    val token = app.playback.details?.commentsToken ?: return
-    if (!open) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
-                .clickable { open = true }.padding(12.dp),
-        ) { Text(tr("Comments"), style = MaterialTheme.typography.titleSmall) }
-        return
-    }
-    Column { CommentList(app, token) }
-}
-
-private fun LazyListScope.comments(app: AppState) {
-    if (app.store.settings.value.hideComments) return
-    item {
-        val token = app.playback.details?.commentsToken
-        if (token != null) {
-            SectionTitle(tr("Comments"))
-            CommentList(app, token)
-        }
-    }
+private fun CommentsTeaser(open: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+            .clickable(onClick = open).padding(12.dp),
+    ) { Text(tr("Comments"), style = MaterialTheme.typography.titleSmall) }
 }
 
 @Composable

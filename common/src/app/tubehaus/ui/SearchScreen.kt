@@ -117,7 +117,7 @@ fun SearchScreen(app: AppState, initial: String) {
             pager.items.isEmpty() && pager.started -> Empty(tr("No results"))
             else -> ItemGrid(
                 pager.items.filter { !(app.noShorts && it is Video && it.short) }, app,
-                loading = pager.loading, onEnd = { pager.loadMore() }, rows = !app.platform.touch,
+                loading = pager.loading, onEnd = { pager.loadMore() }, rows = !LocalCompact.current,
             )
         }
     }

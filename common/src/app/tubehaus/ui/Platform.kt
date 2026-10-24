@@ -25,6 +25,12 @@ interface Platform {
     /** lets the user pick a file; calls [done] with its text (null when cancelled) */
     fun openTextFile(done: (String?) -> Unit)
     fun setFullscreen(on: Boolean)
+    /** screen brightness for the player's swipe gesture, 0..1; null where there is none (the desktop) */
+    fun brightness(): Float? = null
+    fun setBrightness(v: Float) {}
+    /** the system media volume, 0..1, for the other swipe gesture; null where the app has its own (the desktop) */
+    fun mediaVolume(): Float? = null
+    fun setMediaVolume(v: Float) {}
     /** a mouse pointer that shows nothing, hidden while a video plays (none on touch screens) */
     val blankPointer: androidx.compose.ui.input.pointer.PointerIcon? get() = null
     /** true on a metered connection (mobile data): the lower quality cap applies */
