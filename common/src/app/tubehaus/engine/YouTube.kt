@@ -272,7 +272,46 @@ object YouTube {
 
     // ------------------------------------------------------------------ feeds
     /** A channel's latest 15 uploads from its public RSS feed (cheap: one small request). */
+    /** RSS failed lately (YouTube takes it down for hours now and then): go straight to the channel page */
+    @Volatile private var rssDownUntil = 0L
+
+    /**
+     * A channel's latest uploads: its RSS feed (exact times, one small request), or when that
+     * fails its Videos tab, with the times worked out from "3 days ago".
+     */
     suspend fun feed(channelId: String): List<Video> {
+        if (System.currentTimeMillis() > rssDownUntil) {
+            try {
+                return rss(channelId)
+            } catch (e: java.io.IOException) {
+                if (e is HttpError && e.code !in 500..599 && e.code != 404) throw e
+                rssDownUntil = System.currentTimeMillis() + 3_600_000
+            }
+        }
+        val c = channel(channelId, Tab.VIDEOS)
+        val now = System.currentTimeMillis() / 1000
+        return c.items.items.filterIsInstance<Video>().map { v ->
+            v.copy(author = v.author.ifEmpty { c.name }, channelId = channelId, publishedAt = ago(v.publishedText)?.let { now - it } ?: 0)
+        }
+    }
+
+    /** "3 days ago" / "3일 전" → seconds; null when it can't be read */
+    fun ago(text: String): Long? {
+        val m = Regex("(\\d+)\\s*(second|minute|hour|day|week|month|year|초|분|시간|일|주|개월|달|년)", RegexOption.IGNORE_CASE).find(text) ?: return null
+        val n = m.groupValues[1].toLong()
+        val unit = when (m.groupValues[2].lowercase()) {
+            "second", "초" -> 1L
+            "minute", "분" -> 60L
+            "hour", "시간" -> 3600L
+            "day", "일" -> 86400L
+            "week", "주" -> 7 * 86400L
+            "month", "개월", "달" -> 30 * 86400L
+            else -> 365 * 86400L
+        }
+        return n * unit
+    }
+
+    private suspend fun rss(channelId: String): List<Video> {
         val xml = Net.get("https://www.youtube.com/feeds/videos.xml?channel_id=$channelId")
         val author = Regex("<author>\\s*<name>([^<]*)</name>").find(xml)?.groupValues?.get(1)?.let(::unxml) ?: ""
         return Regex("<entry>(.*?)</entry>", RegexOption.DOT_MATCHES_ALL).findAll(xml).mapNotNull { m ->

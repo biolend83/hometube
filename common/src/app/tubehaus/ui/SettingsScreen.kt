@@ -35,7 +35,7 @@ import app.tubehaus.data.Transfer
 import app.tubehaus.rec.Learn
 import kotlin.math.abs
 
-const val VERSION = "0.3.0"
+const val VERSION = "0.3.1"
 
 @Composable
 fun SettingsScreen(app: AppState) {
@@ -85,6 +85,12 @@ fun SettingsScreen(app: AppState) {
             item { SItem(tr("Clear watch history"), "") { dialog = "clear" } }
 
             item { Group(tr("About")) }
+            item {
+                Toggle(tr("Check for updates"), tr("Once a day, on GitHub: a newer version, and fixes for when YouTube changes something. Nothing about you is sent."), s.checkUpdates) { b -> set { it.copy(checkUpdates = b) } }
+            }
+            item {
+                SItem(tr("Check now"), tr("See if a newer version is out")) { app.checkForUpdates(now = true, quiet = false) }
+            }
             item {
                 SItem("TubeHaus $VERSION", tr("Everything happens on this device: it talks to YouTube directly, with no TubeHaus server, no account and no tracking. Your library and recommendations never leave it.")) {
                     app.platform.openExternal("https://github.com/biolend83/tubehaus/tree/android-app")

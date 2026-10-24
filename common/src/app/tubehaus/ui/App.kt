@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,6 +43,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -93,6 +95,8 @@ fun App(app: AppState) {
                         app.fullscreen && app.current is Screen.Watch -> VideoArea(app, Modifier.fillMaxSize(), fullscreen = true)
                         else -> Shell(app)
                     }
+                    LaunchedEffect(Unit) { app.checkForUpdates() }
+                    app.update?.let { UpdateDialog(app, it) }
                 }
             }
         }
@@ -202,6 +206,25 @@ private fun TopBar(app: AppState) {
         }
         if (!app.platform.touch) HorizontalDivider(color = MaterialTheme.colorScheme.outline)
     }
+}
+
+/** A newer version is out: get it now, later, or never for this one. */
+@Composable
+private fun UpdateDialog(app: AppState, r: app.tubehaus.engine.Remote.Release) {
+    AlertDialog(
+        onDismissRequest = { app.update = null },
+        title = { Text(tr("TubeHaus {v} is out").replace("{v}", r.version)) },
+        text = { Text(tr("You have {v}.").replace("{v}", VERSION) + " " + tr(r.download?.let { "Download it and install it over this one; your library stays." } ?: "Pick the file for your system on the release page.")) },
+        confirmButton = {
+            TextButton(onClick = { app.platform.openExternal(r.download ?: r.page); app.update = null }) { Text(tr("Download")) }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = { app.store.settings.update { it.copy(skipVersion = r.version) }; app.update = null }) { Text(tr("Skip this version")) }
+                TextButton(onClick = { app.update = null }) { Text(tr("Later")) }
+            }
+        },
+    )
 }
 
 /** The bar above the tabs while a video plays and you look at something else. */
