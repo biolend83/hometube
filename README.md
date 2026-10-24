@@ -1,14 +1,18 @@
 <div align="center">
 
-# TubeHaus for Windows, macOS and Linux
+# TubeHaus for macOS
 
-**YouTube on your own terms — and everything runs on your PC.**
+**YouTube on your own terms — and everything runs on your computer.**
 
 No server, no account, no Google sign-in, no tracking. The app talks to YouTube directly,
 keeps your subscriptions, history and playlists on the device, and works out recommendations
 there too.
 
-**[⬇ Windows 10/11](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8.msi)** · **[⬇ macOS](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8-mac-arm64.dmg)** · **[⬇ Linux .deb](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8-linux-amd64.deb)** (0.3.8, beta) · [Android app](https://github.com/biolend83/tubehaus/tree/android-app) · [All app releases](https://github.com/biolend83/tubehaus/releases) · [TubeHaus web app (main branch)](https://github.com/biolend83/tubehaus)
+For Apple Silicon Macs (M1 and later). There's no Intel build yet.
+
+**[⬇ macOS (Apple Silicon)](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8-mac-arm64.dmg)** (0.3.8, beta)
+
+[Android](https://github.com/biolend83/tubehaus/tree/android-app) · [Windows](https://github.com/biolend83/tubehaus/tree/windows-app) · **macOS** · [Linux](https://github.com/biolend83/tubehaus/tree/linux-app) · [Web app (self-hosted)](https://github.com/biolend83/tubehaus) · [All releases](https://github.com/biolend83/tubehaus/releases)
 
 </div>
 
@@ -24,8 +28,8 @@ there too.
 - **A real player** — adaptive quality up to 4K/8K (AV1, VP9, H.264 picked by what your hardware
   decodes), captions with auto-translate, speed, resume where you stopped.
   - Android: background play with notification controls, picture-in-picture, opens YouTube links.
-  - Windows: mpv with GPU decoding, the same controls as on the phone plus a volume bar,
-    keyboard shortcuts (space/K, arrows, J/L, F, M) and the mouse wheel for Shorts.
+  - Windows, macOS and Linux: mpv with GPU decoding, the same controls as on the phone plus a
+    volume bar, keyboard shortcuts (space/K, arrows, J/L, F, M) and the mouse wheel for Shorts.
 - **Comments beside the video** — in a side panel next to the video, which keeps playing.
 - **Calm mode** — no view counts, no Shorts, nothing starts by itself.
 - **Focus switches** — hide thumbnails, comments, Shorts or related videos, and turn off the home
@@ -42,39 +46,32 @@ through a TubeHaus server, because there isn't one.
 
 One set of Kotlin sources (`common/src`) is compiled twice: by the Android app with Jetpack
 Compose and by the desktop app with Compose for Desktop. Only the player differs —
-ExoPlayer (Media3) on Android, libmpv on Windows.
+ExoPlayer (Media3) on Android, libmpv on Windows, macOS and Linux.
 
 ## Install
 
-- **Android 8.0+** — [the APK](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8.apk)
-  (beta). Open it on the phone and allow installing from your browser when asked.
-  Updates: [Obtainium](https://obtainium.imranr.dev) with `https://github.com/biolend83/tubehaus`
-  (each "TubeHaus 0.x" release has every platform's file).
-- **Windows 10/11 (64-bit)** — [the installer](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8.msi)
-  (beta, mpv built in). Windows may warn that the publisher is unknown, because the installer
-  isn't code-signed: choose *More info* → *Run anyway*.
-- **macOS (Apple Silicon)** — [the .dmg](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8-mac-arm64.dmg) (beta, new and barely tested).
-  It uses Homebrew's mpv: `brew install mpv`. The app isn't signed by Apple yet, so the first time
-  right-click it → *Open* → *Open*.
-- **Linux (x86-64)** — [.deb](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8-linux-amd64.deb) for Debian/Ubuntu, [.rpm](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8-linux-x86_64.rpm)
-  for Fedora/openSUSE, or [a tar.gz](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8-linux-x64.tar.gz) to unpack anywhere and run `TubeHaus/bin/TubeHaus`.
-  It uses your system's mpv: `sudo apt install libmpv2` (Fedora: `sudo dnf install mpv-libs`, Arch: `mpv`). New and not yet tested much: reports welcome.
+1. Install mpv with [Homebrew](https://brew.sh), the player TubeHaus uses:
+   ```sh
+   brew install mpv
+   ```
+   If mpv is missing, the app tells you when you first play a video.
+2. Download the [.dmg](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8-mac-arm64.dmg), open it and drag TubeHaus into *Applications*.
+3. The app isn't signed by Apple yet, so macOS blocks a plain double-click the first time:
+   right-click TubeHaus → *Open* → *Open*. After that it opens normally.
 
-There is no iOS version: apps outside the App Store can't be installed on an iPhone without
-re-signing them every week. On iPhone and iPad, use the TubeHaus web app.
+The app checks for a newer version once a day and offers the new .dmg (Settings → *Check for updates*).
+Your library is kept in `~/Library/Application Support/TubeHaus`.
 
 ## Build
 
-JDK 21+ and the Android SDK.
+JDK 21+ and `brew install mpv`.
 
 ```sh
-./gradlew :android:assembleRelease     # android/build/outputs/apk/release
-./gradlew :desktop:run                 # needs libmpv-2.dll in desktop/resources/windows
-./gradlew :desktop:packageMsi          # needs a JDK with jpackage
+./gradlew :desktop:run               # run from source
+./gradlew :desktop:packageDmg        # needs a JDK with jpackage
 ```
 
-libmpv for Windows comes from [shinchiro's mpv builds](https://github.com/shinchiro/mpv-winbuild-cmake/releases)
-(`mpv-dev-x86_64-*.7z`, the file `libmpv-2.dll`). The release workflow downloads it.
+The app finds Homebrew's libmpv in `/opt/homebrew/lib` (Apple Silicon) or `/usr/local/lib` (Intel).
 
 ## License
 
