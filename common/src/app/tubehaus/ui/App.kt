@@ -1,5 +1,10 @@
 package app.tubehaus.ui
 
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.foundation.background
@@ -199,13 +204,32 @@ private fun Shell(app: AppState) {
     }
 }
 
+/** The TubeHaus mark (web/y/icon.svg): a teal house with an arched door and a play triangle in it */
+@Composable
+fun HouseMark(modifier: Modifier = Modifier) {
+    val house = remember { PathParser().parsePathString("M72 244 256 82l184 162h-42v184H114V244z").toPath() }
+    val door = remember { PathParser().parsePathString("M204 428V312a52 52 0 0 1 104 0v116z").toPath() }
+    val play = remember { PathParser().parsePathString("m226 286 58 26-58 26z").toPath() }
+    Canvas(modifier) {
+        // the house spans x 72..440, y 82..428 of the 512 grid
+        val s = minOf(size.width / 368f, size.height / 346f)
+        withTransform({
+            translate((size.width - 368f * s) / 2f, (size.height - 346f * s) / 2f)
+            scale(s, s, pivot = Offset.Zero)
+            translate(-72f, -82f)
+        }) {
+            drawPath(house, Color(0xFF2DD4BF))
+            drawPath(door, Color(0xFF14283F))
+            drawPath(play, Color.White)
+        }
+    }
+}
+
 @Composable
 fun Logo(modifier: Modifier = Modifier) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(width = 28.dp, height = 20.dp).clip(RoundedCornerShape(6.dp)).background(Red), contentAlignment = Alignment.Center) {
-            Icon(Icons.Filled.PlayArrow, null, tint = Color.White, modifier = Modifier.size(16.dp))
-        }
-        Spacer(Modifier.width(4.dp))
+        HouseMark(Modifier.size(width = 26.dp, height = 22.dp))
+        Spacer(Modifier.width(6.dp))
         Text("TubeHaus", fontWeight = FontWeight.Bold, fontSize = 19.sp, letterSpacing = (-0.5).sp)
     }
 }
