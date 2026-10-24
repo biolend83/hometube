@@ -8,7 +8,9 @@ No server, no account, no Google sign-in, no tracking. The app talks to YouTube 
 keeps your subscriptions, history and playlists on the device, and works out recommendations
 there too.
 
-**[⬇ Android APK](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8.apk)** · **[⬇ Windows](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8.msi)** · **[⬇ macOS](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8-mac-arm64.dmg)** · **[⬇ Linux .deb](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8-linux-amd64.deb)** (0.3.8, beta) · [All app releases](https://github.com/biolend83/tubehaus/releases) · [TubeHaus web app (main branch)](https://github.com/biolend83/tubehaus)
+**[⬇ Android APK](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8.apk)** · **[⬇ Windows](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8.msi)** · **[⬇ macOS](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8-mac-arm64.dmg)** · **[⬇ Linux .deb](https://github.com/biolend83/tubehaus/releases/download/app-v0.3.8/TubeHaus-0.3.8-linux-amd64.deb)** (0.3.8, beta)
+
+**Android** · [Windows](https://github.com/biolend83/tubehaus/tree/windows-app) · [macOS](https://github.com/biolend83/tubehaus/tree/mac-app) · [Linux](https://github.com/biolend83/tubehaus/tree/linux-app) · [Web app (self-hosted)](https://github.com/biolend83/tubehaus) · [All releases](https://github.com/biolend83/tubehaus/releases)
 
 </div>
 
