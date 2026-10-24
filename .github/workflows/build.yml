@@ -59,6 +59,13 @@ jobs:
           $asset = $rel.assets | Where-Object { $_.name -like 'mpv-dev-x86_64-*.7z' -and $_.name -notlike '*-v3-*' } | Select-Object -First 1
           Invoke-WebRequest $asset.browser_download_url -OutFile mpv-dev.7z
           7z e mpv-dev.7z libmpv-2.dll -odesktop/resources/windows -y
+          # libmpv needs vulkan-1.dll, which only comes with some graphics drivers: ship the official
+          # Khronos loader (Apache-2.0) next to it, or mpv won't load on PCs without one
+          Invoke-WebRequest 'https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime-components.zip?u=' -OutFile vkrt.zip
+          7z x vkrt.zip -ovkrt -y | Out-Null
+          Copy-Item (Get-ChildItem vkrt -Recurse -Filter vulkan-1.dll | Where-Object { $_.FullName -like '*\x64\*' } | Select-Object -First 1).FullName desktop/resources/windows/
+          Copy-Item (Get-ChildItem vkrt -Recurse -Filter VulkanRT-License.txt | Select-Object -First 1).FullName desktop/resources/windows/
+          Get-ChildItem desktop/resources/windows
       - name: Build installer
         run: ./gradlew --no-daemon :desktop:packageReleaseMsi
       - uses: actions/upload-artifact@v4

@@ -35,7 +35,7 @@ import app.tubehaus.data.Transfer
 import app.tubehaus.rec.Learn
 import kotlin.math.abs
 
-const val VERSION = "0.3.4"
+const val VERSION = "0.3.5"
 
 @Composable
 fun SettingsScreen(app: AppState) {
