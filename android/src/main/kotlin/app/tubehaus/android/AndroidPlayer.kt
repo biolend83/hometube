@@ -23,6 +23,7 @@ import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -64,12 +65,22 @@ class AndroidPlayer(private val ctx: Context) : VideoPlayer {
         .setHandleAudioBecomingNoisy(true)
         .setSeekBackIncrementMs(10_000)
         .setSeekForwardIncrementMs(10_000)
+        // read far ahead (up to 5 minutes, within ExoPlayer's memory budget) so a slow patch of network doesn't stop the video
+        .setLoadControl(
+            DefaultLoadControl.Builder()
+                .setBufferDurationsMs(60_000, 300_000, 1_500, 3_000)
+                .setBackBuffer(30_000, true)
+                .build(),
+        )
         .build()
 
     private var stream: Stream? = null
     private var opts = PlayOptions()
     private var caption: Caption? = null
     private var translateTo: String? = null
+    /** the subtitle track inside the media item (shown or not): toggling it never reloads the video */
+    private var loadedCaption: Caption? = null
+    private var loadedTranslate: String? = null
 
     /** codec families this phone decodes in hardware, best first */
     private val codecs: List<String> by lazy {
@@ -136,6 +147,8 @@ class AndroidPlayer(private val ctx: Context) : VideoPlayer {
         opts = o
         caption = o.captions
         translateTo = if (o.captions != null && o.captionLang != null && o.captions.lang.substringBefore('-') != o.captionLang) o.captionLang else null
+        loadedCaption = caption ?: o.standbyCaption
+        loadedTranslate = if (caption != null) translateTo else o.standbyTranslate
         st.value = PlayerState(videoId = s.id, buffering = true, speed = o.speed, captions = caption)
         exo.trackSelectionParameters = exo.trackSelectionParameters.buildUpon()
             .setMinVideoSize(0, 0)
@@ -163,10 +176,10 @@ class AndroidPlayer(private val ctx: Context) : VideoPlayer {
             b.setUri("data:application/dash+xml;base64," + Base64.encodeToString(mpd.toByteArray(), Base64.NO_WRAP))
                 .setMimeType(MimeTypes.APPLICATION_MPD)
         }
-        caption?.let { c ->
+        loadedCaption?.let { c ->
             b.setSubtitleConfigurations(
                 listOf(
-                    MediaItem.SubtitleConfiguration.Builder(Uri.parse(YouTube.captionUrl(c, translateTo)))
+                    MediaItem.SubtitleConfiguration.Builder(Uri.parse(YouTube.captionUrl(c, loadedTranslate)))
                         .setMimeType(MimeTypes.TEXT_VTT).setLanguage(c.lang).setLabel(c.name)
                         .setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build(),
                 ),
@@ -195,11 +208,15 @@ class AndroidPlayer(private val ctx: Context) : VideoPlayer {
         val s = stream ?: return
         caption = c
         this.translateTo = translateTo
-        // side-loaded subtitles are part of the media item: rebuild it where we are
+        exo.trackSelectionParameters = exo.trackSelectionParameters.buildUpon()
+            .setPreferredTextLanguage(c?.lang ?: loadedCaption?.lang).setTrackTypeDisabled(C.TRACK_TYPE_TEXT, c == null).build()
+        // off, or back on with the track that is already loaded: just show or hide it
+        if (c == null || (c == loadedCaption && translateTo == loadedTranslate)) { sync(); return }
+        // another track: side-loaded subtitles are part of the media item, so rebuild it where we are
+        loadedCaption = c
+        loadedTranslate = translateTo
         val pos = exo.currentPosition
         val playing = exo.playWhenReady
-        exo.trackSelectionParameters = exo.trackSelectionParameters.buildUpon()
-            .setPreferredTextLanguage(c?.lang).setTrackTypeDisabled(C.TRACK_TYPE_TEXT, c == null).build()
         exo.setMediaItem(item(s), pos)
         exo.prepare()
         exo.playWhenReady = playing
@@ -218,7 +235,7 @@ class AndroidPlayer(private val ctx: Context) : VideoPlayer {
     }
 
     @Composable
-    override fun View(modifier: Modifier, controls: Boolean) {
+    override fun View(modifier: Modifier) {
         val s by state.collectAsState()
         AndroidView(
             factory = { c ->
@@ -227,7 +244,7 @@ class AndroidPlayer(private val ctx: Context) : VideoPlayer {
                     setShowNextButton(false)
                     setShowPreviousButton(false)
                     setShowSubtitleButton(true)
-                    setShutterBackgroundColor(android.graphics.Color.BLACK)
+                    setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)   // the thumbnail shows until the first frame
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     player = exo
                 }

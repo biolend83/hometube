@@ -27,13 +27,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.WatchLater
-import androidx.compose.material.icons.outlined.ClosedCaption
-import androidx.compose.material.icons.outlined.Fullscreen
-import androidx.compose.material.icons.outlined.HighQuality
 import androidx.compose.material.icons.outlined.LibraryAdd
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SkipNext
-import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.outlined.WatchLater
@@ -41,8 +37,6 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -121,7 +115,7 @@ private fun PlayerBox(app: AppState) {
             else -> VideoArea(app, Modifier.fillMaxSize())
         }
         // while loading there are no controls yet: keep a way back
-        if (app.platform.touch && (pb.error != null || pb.loading || st.videoId != v?.id)) {
+        if ((pb.error != null || pb.loading || st.videoId != v?.id)) {
             IconButton(onClick = { app.back() }, modifier = Modifier.align(Alignment.TopStart)) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Back"), tint = Color.White)
             }
@@ -175,13 +169,11 @@ private fun Info(app: AppState, v: Video) {
 @Composable
 private fun Actions(app: AppState, v: Video) {
     val pb = app.playback
-    val st by app.platform.player.state.collectAsState()
     val lib by app.store.lib.state.collectAsState()
     val liked = lib.likes.any { it.id == v.id }
     val disliked = v.id in lib.dislikes
     val saved = lib.wl.any { it.id == v.id }
     var pick by remember { mutableStateOf(false) }
-    var menu by remember { mutableStateOf<String?>(null) }
     val calm = app.store.settings.value.calm
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
@@ -199,48 +191,6 @@ private fun Actions(app: AppState, v: Video) {
         item { Chip(if (saved) Icons.Filled.WatchLater else Icons.Outlined.WatchLater, tr("Watch later")) { app.store.setInList("wl", v, !saved) } }
         item { Chip(Icons.Outlined.LibraryAdd, tr("Save")) { pick = true } }
         item { Chip(Icons.Outlined.Share, tr("Share")) { app.share(v.title, "https://youtu.be/${v.id}") } }
-        // on touch screens quality, speed, captions and full screen live in the player itself
-        if (!app.platform.touch) item {
-            Box {
-                Chip(Icons.Outlined.HighQuality, if (st.height > 0) "${st.height}p" else tr("Auto")) { menu = "q" }
-                DropdownMenu(menu == "q", { menu = null }) {
-                    DropdownMenuItem(text = { Text(tr("Auto")) }, onClick = { app.platform.player.setHeight(0); menu = null })
-                    for (h in st.heights.sortedDescending()) DropdownMenuItem(text = { Text("${h}p") }, onClick = { app.platform.player.setHeight(h); menu = null })
-                }
-            }
-        }
-        if (!app.platform.touch) item {
-            Box {
-                Chip(Icons.Outlined.Speed, if (st.speed == 1f) tr("Speed") else "${st.speed}x") { menu = "s" }
-                DropdownMenu(menu == "s", { menu = null }) {
-                    for (x in listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f, 3f)) DropdownMenuItem(text = { Text("${x}x") }, onClick = {
-                        app.platform.player.setSpeed(x); app.store.settings.update { it.copy(speed = x) }; menu = null
-                    })
-                }
-            }
-        }
-        val caps = pb.stream?.captions ?: emptyList()
-        if (caps.isNotEmpty() && !app.platform.touch) item {
-            Box {
-                Chip(Icons.Outlined.ClosedCaption, st.captions?.name ?: tr("Captions")) { menu = "c" }
-                DropdownMenu(menu == "c", { menu = null }) {
-                    DropdownMenuItem(text = { Text(tr("Off")) }, onClick = {
-                        app.platform.player.setCaptions(null, null); app.store.settings.update { it.copy(captions = false) }; menu = null
-                    })
-                    val lang = app.store.settings.value.lang.ifEmpty { "en" }
-                    for (c in caps) DropdownMenuItem(text = { Text(c.name) }, onClick = {
-                        app.platform.player.setCaptions(c, null); app.store.settings.update { it.copy(captions = true) }; menu = null
-                    })
-                    // YouTube translates any track into your language
-                    caps.firstOrNull()?.takeIf { caps.none { c -> c.lang.substringBefore('-') == lang } }?.let { c ->
-                        DropdownMenuItem(text = { Text(tr("Auto-translate") + " (${LANGS.firstOrNull { it.first == lang }?.second ?: lang})") }, onClick = {
-                            app.platform.player.setCaptions(c, lang); app.store.settings.update { it.copy(captions = true) }; menu = null
-                        })
-                    }
-                }
-            }
-        }
-        if (!app.platform.touch) item { Chip(Icons.Outlined.Fullscreen, tr("Full screen")) { app.setFull(true) } }
         if (pb.next != null) item { Chip(Icons.Outlined.SkipNext, tr("Next")) { pb.skipNext() } }
     }
     if (pick) PlaylistPicker(v, app) { pick = false }

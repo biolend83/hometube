@@ -1,13 +1,20 @@
 package app.tubehaus.desktop
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.awt.SwingPanel
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asComposeImageBitmap
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import app.tubehaus.engine.Caption
 import app.tubehaus.engine.Format
 import app.tubehaus.engine.Stream
@@ -15,20 +22,29 @@ import app.tubehaus.engine.YouTube
 import app.tubehaus.ui.PlayOptions
 import app.tubehaus.ui.PlayerState
 import app.tubehaus.ui.VideoPlayer
-import com.sun.jna.Native
+import com.sun.jna.Memory
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.DoubleByReference
+import com.sun.jna.ptr.PointerByReference
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import java.awt.Canvas
-import java.awt.Color as AwtColor
+import org.jetbrains.skia.Bitmap
+import org.jetbrains.skia.ColorAlphaType
+import org.jetbrains.skia.ColorType
+import org.jetbrains.skia.ImageInfo
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
+import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
- * mpv (libmpv) drawing into a window inside the app. mpv plays YouTube's separate video and
- * audio streams together (the audio as an external track), decodes with the GPU, and brings
- * its own on-screen controller with a seek bar, so the desktop gets a first-class player.
+ * mpv (libmpv) as the desktop player. mpv plays YouTube's separate video and audio streams
+ * together (the audio as an external track) and decodes on the GPU; through its render API it
+ * draws each frame, subtitles included, into memory, and Compose paints that frame like any
+ * image. So there is no native window inside the app: the controls (PlayerControls.kt), menus
+ * and the mini player sit on top of the video exactly as on Android.
  *
  * YouTube gives one URL per quality, so changing quality reloads at the same position.
  */
@@ -45,36 +61,67 @@ class MpvPlayer : VideoPlayer {
     private var pinned = 0
     private var caption: Caption? = null
     private var translateTo: String? = null
-    private var showControls = true
-
-    /** the one surface mpv draws on; re-parented as the screens change */
-    private val canvas = object : Canvas() {
-        override fun addNotify() {
-            super.addNotify()
-            attach(Native.getComponentID(this))
-        }
-
-        override fun removeNotify() {
-            detach()
-            super.removeNotify()
-        }
-    }.apply { background = AwtColor.BLACK }
+    /** the subtitle track added to the file (shown or not): the captions button only flips its visibility */
+    @Volatile private var loadedCaption: Caption? = null
+    @Volatile private var loadedTranslate: String? = null
 
     val available get() = lib != null
+
+    // ------------------------------------------------------------------ the picture
+    /** one frame buffer; three of them rotate so the one on screen is never the one being drawn */
+    private class Frame(val w: Int, val h: Int) {
+        val bitmap = Bitmap().apply {
+            allocPixels(ImageInfo(w, h, ColorType.RGB_888X, ColorAlphaType.OPAQUE), (w * 4 + 63) / 64 * 64)
+        }
+        val addr = Pointer(bitmap.peekPixels()!!.addr)
+        val image: ImageBitmap = bitmap.asComposeImageBitmap()
+    }
+
+    private var render: Pointer? = null
+    private val renderLock = Any()
+    private val wake = Semaphore(0)
+    // kept in a field: JNA must not lose the callback while mpv holds it
+    private val onUpdate = LibMpv.UpdateCallback { if (wake.availablePermits() == 0) wake.release() }
+    private val apiType = LibMpv.cString("sw")
+    // R G B and a byte mpv leaves at 0: Skia's RGB_888X never reads that byte (as alpha it would make the picture see-through)
+    private val pixelFormat = LibMpv.cString("rgb0")
+    private val swSize = Memory(8)
+    private val stride = Memory(8)
+    private val ring = arrayOfNulls<Frame>(3)
+    private var next = 0
+    @Volatile private var front: Frame? = null
+    /** bumped for every new frame: the Canvas reads it, so Compose repaints (only repaints) */
+    private val frames = mutableIntStateOf(0)
+    @Volatile private var view = IntSize.Zero
+    @Volatile private var views = 0
+    @Volatile private var closing = false
+    /** the view changed size: draw the current frame again even when paused */
+    @Volatile private var redraw = false
 
     private fun mpv(): Pointer? {
         synchronized(lock) {
             h?.let { return it }
+            if (closing) return null
             val l = lib ?: return null
             val p = l.mpv_create() ?: return null
             fun o(k: String, v: String) = l.mpv_set_option_string(p, k, v)
-            o("vo", "gpu-next"); o("hwdec", "auto-safe")
-            o("osc", "yes"); o("input-default-bindings", "yes"); o("input-vo-keyboard", "yes")
-            o("keep-open", "no"); o("idle", "yes"); o("force-window", "yes")
-            o("ytdl", "no"); o("cache", "yes"); o("demuxer-max-bytes", "150MiB"); o("demuxer-readahead-secs", "60")
-            o("sub-auto", "no"); o("audio-display", "no"); o("terminal", "no"); o("msg-level", "all=warn")
-            o("vid", "no")              // no video window until the app gives one
+            o("vo", "libmpv")
+            if (o("hwdec", "auto-copy-safe") < 0) o("hwdec", "auto-copy")   // GPU decoding, frames copied back for us
+            o("idle", "yes"); o("keep-open", "no"); o("ytdl", "no")
+            o("input-default-bindings", "no"); o("input-vo-keyboard", "no"); o("osc", "no")
+            // read far ahead (5 minutes, up to 500 MB) and keep the last part for seeking back
+            o("cache", "yes"); o("cache-secs", "300"); o("demuxer-readahead-secs", "300")
+            o("demuxer-max-bytes", "500MiB"); o("demuxer-max-back-bytes", "100MiB")
+            o("sub-auto", "no"); o("sub-font-size", "42"); o("sub-border-size", "2.5"); o("sub-margin-y", "40")
+            o("audio-display", "no"); o("audio-client-name", "TubeHaus")
+            o("terminal", "no"); o("msg-level", "all=warn")
             if (l.mpv_initialize(p) < 0) { l.mpv_terminate_destroy(p); return null }
+            val res = PointerByReference()
+            if (l.mpv_render_context_create(res, p, LibMpv.params(LibMpv.RENDER_PARAM_API_TYPE to apiType)) >= 0) {
+                render = res.value
+                l.mpv_render_context_set_update_callback(res.value, onUpdate, null)
+                thread(isDaemon = true, name = "mpv-render") { renderLoop(l) }
+            }
             h = p
             thread(isDaemon = true, name = "mpv-events") { events(l, p) }
             thread(isDaemon = true, name = "mpv-state") { poll(l, p) }
@@ -82,17 +129,53 @@ class MpvPlayer : VideoPlayer {
         }
     }
 
-    private fun attach(wid: Long) {
-        val p = mpv() ?: return
-        lib!!.mpv_set_property_string(p, "wid", wid.toString())
-        lib.mpv_set_property_string(p, "vid", "auto")
+    private fun renderLoop(l: LibMpv) {
+        while (!closing) {
+            wake.tryAcquire(250, TimeUnit.MILLISECONDS)
+            synchronized(renderLock) {
+                val ctx = render ?: return
+                val fresh = l.mpv_render_context_update(ctx) and LibMpv.RENDER_UPDATE_FRAME != 0L
+                if (!fresh && !redraw) return@synchronized
+                // nothing on screen (another page is open): mpv drops the frame and plays on
+                if (views == 0) return@synchronized
+                val (w, h) = target() ?: return@synchronized
+                redraw = false
+                val f = ring[next]?.takeIf { it.w == w && it.h == h } ?: Frame(w, h).also { ring[next] = it }
+                next = (next + 1) % ring.size
+                swSize.setInt(0, w); swSize.setInt(4, h)
+                stride.setLong(0, f.bitmap.rowBytes.toLong())
+                val p = LibMpv.params(
+                    LibMpv.RENDER_PARAM_SW_SIZE to swSize,
+                    LibMpv.RENDER_PARAM_SW_FORMAT to pixelFormat,
+                    LibMpv.RENDER_PARAM_SW_STRIDE to stride,
+                    LibMpv.RENDER_PARAM_SW_POINTER to f.addr,
+                )
+                if (l.mpv_render_context_render(ctx, p) >= 0) {
+                    f.bitmap.notifyPixelsChanged()
+                    front = f
+                    frames.intValue++
+                }
+            }
+        }
     }
 
-    private fun detach() {
-        val p = h ?: return
-        lib!!.mpv_set_property_string(p, "vid", "no")
+    /**
+     * The size mpv draws at: the view's, but at most 1920x1080 (mpv scales on the CPU here,
+     * and Compose stretches the last bit smoothly). mpv keeps the video's shape itself.
+     */
+    private fun target(): Pair<Int, Int>? {
+        val v = view
+        if (v.width < 2 || v.height < 2) return null
+        val s = min(1.0, min(1920.0 / v.width, 1080.0 / v.height))
+        return (v.width * s).roundToInt().coerceAtLeast(2) to (v.height * s).roundToInt().coerceAtLeast(2)
     }
 
+    private fun clearPicture() {
+        front = null
+        frames.intValue++
+    }
+
+    // ------------------------------------------------------------------ mpv's side
     private fun cmd(vararg a: String) {
         val p = mpv() ?: return
         lib!!.mpv_command(p, arrayOf(*a, null))
@@ -112,11 +195,12 @@ class MpvPlayer : VideoPlayer {
                     val data = e.getPointer(16)
                     val reason = data?.getInt(0) ?: -1
                     if (reason == LibMpv.END_FILE_REASON_EOF && st.value.videoId != null) st.update { it.copy(ended = true, playing = false) }
-                    if (reason == LibMpv.END_FILE_REASON_ERROR) st.update { it.copy(error = "Playback failed") }
+                    if (reason == LibMpv.END_FILE_REASON_ERROR) st.update { it.copy(error = "Playback failed", buffering = false) }
                 }
                 LibMpv.EVENT_FILE_LOADED -> {
                     st.update { it.copy(ended = false, error = null) }
-                    caption?.let { c -> cmd("sub-add", YouTube.captionUrl(c, translateTo), "select", c.name) }
+                    // mpv downloads the track here, on this thread, never on the UI's
+                    loadedCaption?.let { c -> cmd("sub-add", YouTube.captionUrl(c, loadedTranslate), "select", c.name) }
                 }
             }
         }
@@ -133,21 +217,22 @@ class MpvPlayer : VideoPlayer {
     }
 
     private fun poll(l: LibMpv, p: Pointer) {
-        while (true) {
-            Thread.sleep(250)
+        while (!closing) {
+            Thread.sleep(200)
             val s = stream ?: continue
             val pos = num(l, p, "time-pos")
             val dur = num(l, p, "duration")
             val paused = str(l, p, "pause") == "yes"
             val idle = str(l, p, "idle-active") == "yes"
-            val cache = str(l, p, "paused-for-cache") == "yes"
+            val waiting = str(l, p, "paused-for-cache") == "yes" || str(l, p, "seeking") == "yes"
             val speed = num(l, p, "speed")
             val cached = num(l, p, "demuxer-cache-time")
             st.update {
                 it.copy(
                     videoId = s.id,
                     playing = !paused && !idle && !it.ended,
-                    buffering = cache,
+                    // from loadfile until the first frame there is no position yet
+                    buffering = !it.ended && it.error == null && (waiting || (!paused && pos == null)),
                     positionMs = pos?.let { x -> (x * 1000).toLong() } ?: it.positionMs,
                     durationMs = dur?.let { x -> (x * 1000).toLong() } ?: (s.lengthSec * 1000L),
                     speed = speed?.toFloat() ?: it.speed,
@@ -174,11 +259,11 @@ class MpvPlayer : VideoPlayer {
     private fun open(startMs: Long) {
         val s = stream ?: return
         if (mpv() == null) {
-            st.update { it.copy(error = "mpv is missing: put libmpv-2.dll next to TubeHaus (see the README)") }
+            st.update { it.copy(error = "mpv is missing: put libmpv-2.dll next to TubeHaus (see the README)", buffering = false) }
             return
         }
         val heights = s.video.map { it.height }.distinct().sorted()
-        st.update { it.copy(heights = heights, height = pinned) }
+        st.update { it.copy(heights = heights, height = pinned, buffering = true) }
         val url: String
         cmd("change-list", "audio-files", "clr", "")
         if (s.live || s.video.isEmpty()) {
@@ -195,7 +280,6 @@ class MpvPlayer : VideoPlayer {
         set("pause", if (opts.autoplay) "no" else "yes")
         set("force-media-title", opts.title.ifEmpty { s.title })
         cmd("loadfile", url, "replace")
-        controls(showControls)
     }
 
     // ------------------------------------------------------------------ VideoPlayer
@@ -205,7 +289,13 @@ class MpvPlayer : VideoPlayer {
         pinned = 0
         caption = o.captions
         translateTo = if (o.captions != null && o.captionLang != null && o.captions.lang.substringBefore('-') != o.captionLang) o.captionLang else null
-        st.value = PlayerState(videoId = s.id, buffering = true, speed = o.speed, captions = caption)
+        loadedCaption = caption ?: o.standbyCaption
+        loadedTranslate = if (caption != null) translateTo else o.standbyTranslate
+        set("sub-visibility", if (caption != null) "yes" else "no")
+        val muted = st.value.muted
+        st.value = PlayerState(videoId = s.id, buffering = true, speed = o.speed, captions = caption, volume = o.volume, muted = muted)
+        clearPicture()
+        set("volume", (o.volume * 100).roundToInt().toString())
         open(o.startMs)
     }
 
@@ -215,8 +305,12 @@ class MpvPlayer : VideoPlayer {
     }
 
     override fun pause() = set("pause", "yes")
-    override fun seekTo(ms: Long) = cmd("seek", "%.1f".format(java.util.Locale.ROOT, ms / 1000.0), "absolute")
-    override fun setSpeed(x: Float) { opts = opts.copy(speed = x); set("speed", x.toString()) }
+    override fun seekTo(ms: Long) {
+        if (st.value.ended) { st.update { it.copy(ended = false) }; open(ms); return }
+        st.update { it.copy(positionMs = ms) }
+        cmd("seek", "%.1f".format(java.util.Locale.ROOT, ms / 1000.0), "absolute")
+    }
+    override fun setSpeed(x: Float) { opts = opts.copy(speed = x); set("speed", x.toString()); st.update { it.copy(speed = x) } }
 
     override fun setHeight(h: Int) {
         pinned = h
@@ -227,38 +321,74 @@ class MpvPlayer : VideoPlayer {
         caption = c
         this.translateTo = translateTo
         st.update { it.copy(captions = c) }
-        cmd("sub-remove")
-        if (c != null) cmd("sub-add", YouTube.captionUrl(c, translateTo), "select", c.name)
+        if (c == null || (c == loadedCaption && translateTo == loadedTranslate)) {
+            set("sub-visibility", if (c != null) "yes" else "no")
+            return
+        }
+        loadedCaption = c
+        loadedTranslate = translateTo
+        // another track: mpv downloads it, so not on the UI thread
+        thread(isDaemon = true, name = "mpv-subs") {
+            cmd("sub-remove")
+            cmd("sub-add", YouTube.captionUrl(c, translateTo), "select", c.name)
+            set("sub-visibility", "yes")
+        }
     }
 
     override fun setLoop(on: Boolean) { opts = opts.copy(loop = on); set("loop-file", if (on) "inf" else "no") }
 
+    override val hasVolume get() = true
+    override fun setVolume(v: Float) {
+        val x = v.coerceIn(0f, 1f)
+        set("volume", (x * 100).roundToInt().toString())
+        st.update { it.copy(volume = x) }
+    }
+
+    override fun setMuted(on: Boolean) {
+        set("mute", if (on) "yes" else "no")
+        st.update { it.copy(muted = on) }
+    }
+
     override fun stop() {
         stream = null
         cmd("stop")
-        st.value = PlayerState()
-    }
-
-    private fun controls(on: Boolean) {
-        showControls = on
-        cmd("script-message", "osc-visibility", if (on) "auto" else "never", "no_osd")
+        clearPicture()
+        st.value = PlayerState(volume = st.value.volume, muted = st.value.muted)
     }
 
     @Composable
-    override fun View(modifier: Modifier, controls: Boolean) {
+    override fun View(modifier: Modifier) {
         if (!available) {
             Box(modifier.background(Color.Black), contentAlignment = Alignment.Center) {
                 Text("mpv is missing: put libmpv-2.dll next to TubeHaus", color = Color.White)
             }
             return
         }
-        if (controls != showControls) controls(controls)
-        SwingPanel(background = Color.Black, factory = { canvas }, modifier = modifier)
+        DisposableEffect(Unit) {
+            views++
+            redraw = true
+            onDispose { views-- }
+        }
+        // transparent until the first frame, so a thumbnail underneath shows through
+        Canvas(modifier.onSizeChanged { view = it; redraw = true; wake.release() }) {
+            frames.intValue          // repaint on every new frame
+            val f = front ?: return@Canvas
+            drawImage(
+                f.image,
+                srcSize = IntSize(f.w, f.h),
+                dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                filterQuality = FilterQuality.Low,
+            )
+        }
     }
 
     fun shutdown() {
-        val p = h ?: return
-        h = null
+        closing = true
+        val p = synchronized(lock) { h.also { h = null } } ?: return
+        synchronized(renderLock) {
+            render?.let { lib?.mpv_render_context_free(it) }   // before the core goes away
+            render = null
+        }
         lib?.mpv_terminate_destroy(p)
     }
 }

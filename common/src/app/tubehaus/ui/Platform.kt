@@ -48,6 +48,9 @@ data class PlayerState(
     val height: Int = 0,
     val speed: Float = 1f,
     val captions: Caption? = null,
+    /** 0..1, only where the app has its own volume (the desktop) */
+    val volume: Float = 1f,
+    val muted: Boolean = false,
 )
 
 data class PlayOptions(
@@ -57,7 +60,11 @@ data class PlayOptions(
     val speed: Float = 1f,
     val captions: Caption? = null,
     val captionLang: String? = null,
+    /** the track the captions button turns on: loaded with the video but hidden, so the button is instant */
+    val standbyCaption: Caption? = null,
+    val standbyTranslate: String? = null,
     val loop: Boolean = false,
+    val volume: Float = 1f,
     /** for the system media controls */
     val title: String = "",
     val artist: String = "",
@@ -77,9 +84,14 @@ interface VideoPlayer {
     fun setLoop(on: Boolean)
     fun stop()
 
-    /** The video picture. [controls]: the platform's own play/seek controls on top of it. */
+    /** phones use the system volume; the desktop has a slider of its own */
+    val hasVolume: Boolean get() = false
+    fun setVolume(v: Float) {}
+    fun setMuted(on: Boolean) {}
+
+    /** Just the picture: the controls on top of it are drawn in Compose (PlayerControls.kt). */
     @Composable
-    fun View(modifier: Modifier, controls: Boolean)
+    fun View(modifier: Modifier)
 }
 
 val LocalPlatform = staticCompositionLocalOf<Platform> { error("no platform") }

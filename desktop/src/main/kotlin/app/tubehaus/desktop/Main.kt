@@ -15,6 +15,8 @@ import app.tubehaus.data.Store
 import app.tubehaus.ui.App
 import app.tubehaus.ui.AppState
 import app.tubehaus.ui.Platform
+import app.tubehaus.ui.Screen
+import app.tubehaus.ui.playerKey
 import java.awt.Desktop
 import java.awt.FileDialog
 import java.awt.Frame
@@ -83,7 +85,12 @@ fun main() {
                 else when (e.key) {
                     Key.Escape -> state.back()
                     Key.F11 -> { state.setFull(!state.fullscreen); true }
-                    else -> false
+                    // the player's keys (space, arrows, J/K/L, F, M) where a video is on screen
+                    else -> when {
+                        state.current is Screen.Shorts -> state.shortsKeys?.invoke(e.key) ?: false
+                        state.fullscreen || state.current is Screen.Watch -> playerKey(state, e.key)
+                        else -> false
+                    }
                 }
             },
         ) {

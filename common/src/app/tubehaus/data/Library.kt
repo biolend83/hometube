@@ -78,4 +78,8 @@ data class Settings(
     val calm: Boolean = false,
     val dark: Int = 0,            // 0 follow system, 1 light, 2 dark
     val historyOff: Boolean = false,
+    /** the desktop player's own volume, 0..1 */
+    val volume: Float = 1f,
+    /** the first-start screen that offers to bring subscriptions over has been seen */
+    val welcomed: Boolean = false,
 )

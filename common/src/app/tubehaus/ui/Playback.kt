@@ -109,7 +109,7 @@ class Playback(private val app: AppState) {
     private fun start(s: Stream, startSec: Long?) {
         val set = store.settings.value
         val cap = if (app.platform.metered()) set.maxHeightMobileData else set.maxHeight
-        val cc = if (set.captions) pickCaption(s.captions, set.captionLang.ifEmpty { lang() }) else null
+        val choice = captionChoice(s)
         player.load(
             s,
             PlayOptions(
@@ -117,8 +117,11 @@ class Playback(private val app: AppState) {
                 maxHeight = if (cap <= 0) Int.MAX_VALUE else cap,
                 autoplay = true,
                 speed = set.speed,
-                captions = cc,
+                captions = choice?.first?.takeIf { set.captions },
                 captionLang = set.captionLang.ifEmpty { lang() },
+                standbyCaption = choice?.first,
+                standbyTranslate = choice?.second,
+                volume = set.volume,
                 title = s.title, artist = s.author,
                 artwork = video?.thumbHigh ?: "",
             ),
@@ -128,6 +131,13 @@ class Playback(private val app: AppState) {
     private fun lang() = store.settings.value.lang.ifEmpty { "en" }
 
     /** the track in [want], else one that YouTube can translate into it */
+    /** what the captions button shows: the track in your caption language, or YouTube's translation into it */
+    fun captionChoice(s: Stream? = stream): Pair<Caption, String?>? {
+        val want = store.settings.value.captionLang.ifEmpty { lang() }
+        val c = pickCaption(s?.captions ?: return null, want) ?: return null
+        return c to want.takeIf { c.lang.substringBefore('-') != it }
+    }
+
     fun pickCaption(list: List<Caption>, want: String): Caption? =
         list.firstOrNull { it.lang.substringBefore('-') == want && !it.auto }
             ?: list.firstOrNull { it.lang.substringBefore('-') == want }

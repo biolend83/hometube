@@ -86,8 +86,9 @@ fun App(app: AppState) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when {
                         settings.lang.isEmpty() -> LanguagePicker(app)
+                        !settings.welcomed && app.store.lib.value.subs.isEmpty() -> Welcome(app)
                         app.pip -> Box(Modifier.fillMaxSize().background(Color.Black)) {
-                            app.platform.player.View(Modifier.fillMaxSize(), controls = false)
+                            app.platform.player.View(Modifier.fillMaxSize())
                         }
                         app.fullscreen && app.current is Screen.Watch -> VideoArea(app, Modifier.fillMaxSize(), fullscreen = true)
                         else -> Shell(app)

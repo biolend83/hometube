@@ -247,18 +247,19 @@ fun PlaylistPicker(v: Video, app: AppState, dismiss: () -> Unit) {
 }
 
 /** Asks for a file and merges whatever is in it into the library. */
-fun importFile(app: AppState) {
+fun importFile(app: AppState, done: (Boolean) -> Unit = {}) {
     app.platform.openTextFile { text ->
-        if (text == null) return@openTextFile
+        if (text == null) return@openTextFile done(false)
         val p = Transfer.parse(text)
         if (p.format == null || p.empty) {
             app.toast(tr("Couldn't find anything to import in this file"))
-            return@openTextFile
+            return@openTextFile done(false)
         }
         val r = Transfer.merge(app.store, p)
         app.toast(
             tr("Imported from {f}: {s} subscriptions, {h} history, {p} playlists")
                 .replace("{f}", r.format).replace("{s}", "${r.subs}").replace("{h}", "${r.hist}").replace("{p}", "${r.playlists}"),
         )
+        done(true)
     }
 }

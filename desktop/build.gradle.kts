@@ -38,7 +38,7 @@ dependencies {
 compose.desktop {
     application {
         mainClass = "app.tubehaus.desktop.MainKt"
-        jvmArgs += listOf("-Xmx512m", "-Dsun.java2d.d3d=false")
+        jvmArgs += listOf("-Xmx512m")
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "TubeHaus"

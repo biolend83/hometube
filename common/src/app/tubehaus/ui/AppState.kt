@@ -50,6 +50,8 @@ class AppState(val platform: Platform, val store: Store) {
     var fullscreen by mutableStateOf(false)
     /** Android picture-in-picture: only the video is drawn */
     var pip by mutableStateOf(false)
+    /** the Shorts screen's keys while it is open (up and down change the Short) */
+    var shortsKeys: ((androidx.compose.ui.input.key.Key) -> Boolean)? = null
 
     fun go(s: Screen) {
         if (s in TABS) {

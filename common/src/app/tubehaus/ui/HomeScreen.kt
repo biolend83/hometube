@@ -1,6 +1,7 @@
 package app.tubehaus.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -131,6 +133,49 @@ fun LanguagePicker(app: AppState) {
                     OutlinedButton(onClick = { app.store.settings.update { it.copy(lang = code) } }) { Text(name) }
                 }
             }
+        }
+    }
+}
+
+/**
+ * First start, right after the language: bring the subscriptions over from YouTube or another app.
+ * Each source says in one line where its export is; one button opens the file, whatever it came from.
+ */
+@Composable
+fun Welcome(app: AppState) {
+    fun finish() = app.store.settings.update { it.copy(welcomed = true) }
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(
+            Modifier.widthIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Logo(Modifier.padding(top = 16.dp, bottom = 24.dp))
+            Text(tr("Bring your subscriptions"), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+            Text(
+                tr("Your channels are kept on this device, no account needed. Pick the file you exported from another app:"),
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp, bottom = 20.dp),
+            )
+            for ((name, how) in listOf(
+                "YouTube" to "takeout.google.com → YouTube → subscriptions.csv",
+                "NewPipe" to tr("Subscriptions → ⋮ → Export to → File"),
+                "FreeTube" to tr("Settings → Data settings → Export subscriptions"),
+                "Invidious" to tr("Settings → Import/Export → Export subscriptions"),
+                "TubeHaus · OPML" to tr("a TubeHaus backup, or any feed reader's OPML"),
+            )) {
+                Column(
+                    Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                ) {
+                    Text(name, style = MaterialTheme.typography.titleSmall)
+                    Text(how, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Button(onClick = { importFile(app) { ok -> if (ok) finish() } }, modifier = Modifier.padding(top = 20.dp).fillMaxWidth()) {
+                Text(tr("Choose a file"))
+            }
+            TextButton(onClick = { finish() }, modifier = Modifier.padding(top = 4.dp)) { Text(tr("Skip for now")) }
         }
     }
 }
